@@ -3,9 +3,11 @@
 class AudioManager {
   private ctx: AudioContext | null = null;
 
-  private initCtx() {
+  initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -13,6 +15,10 @@ class AudioManager {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+  }
+
+  unlockAudio() {
+    this.initCtx();
   }
 
   // Soft click / tap feedback
@@ -114,3 +120,13 @@ class AudioManager {
 }
 
 export const soundFx = new AudioManager();
+
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    soundFx.unlockAudio();
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+  window.addEventListener('keydown', unlock, { once: true, passive: true });
+}

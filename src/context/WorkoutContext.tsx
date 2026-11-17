@@ -83,6 +83,27 @@ const STORAGE_KEYS = {
   SETTINGS: 'pitbull_settings'
 };
 
+// Calculate 1RM using standard Epley Formula: weight * (1 + reps / 30)
+export const calculate1RM = (weight: number, reps: number): number => {
+  if (reps <= 0 || weight <= 0) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+};
+
+// Big muscles vs small muscles recovery windows (ABOT standard)
+const BIG_MUSCLES = new Set<string>([
+  'chest',
+  'back',
+  'upper-back',
+  'lower-back',
+  'gluteal',
+  'glutes',
+  'quadriceps',
+  'quads',
+  'hamstring',
+  'hamstrings'
+]);
+
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
 export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -126,11 +147,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    // Seed initial dummy past workout so user sees instant beautiful stats
+    // Seed initial demo past workout for instant visual engagement
     const now = Date.now();
     const demoPast: WorkoutSession = {
       id: 'demo-session-1',
-      title: 'Push Day (Chest & Triceps)',
+      title: 'Push Day (Chest, Shoulders, Triceps)',
       routineId: 'push-day',
       startedAt: now - 86400000 * 2,
       finishedAt: now - 86400000 * 2 + 3600000,
@@ -141,8 +162,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           exerciseId: 'bench-press',
           sets: [
             { id: 's1', setNumber: 1, type: 'normal', weight: 80, reps: 8, completed: true, isPR: false },
-            { id: 's2', setNumber: 2, type: 'normal', weight: 82.5, reps: 8, completed: true, isPR: true },
-            { id: 's3', setNumber: 3, type: 'normal', weight: 82.5, reps: 7, completed: true, isPR: false }
+            { id: 's2', setNumber: 2, type: 'normal', weight: 85, reps: 6, completed: true, isPR: true },
+            { id: 's3', setNumber: 3, type: 'normal', weight: 80, reps: 7, completed: true, isPR: false }
           ]
         },
         {
@@ -154,7 +175,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
           ]
         }
       ],
-      totalVolume: 82.5 * 8 + 80 * 8 + 82.5 * 7 + 30 * 10 * 2 + 32 * 8 * 2,
+      totalVolume: 80 * 8 + 85 * 6 + 80 * 7 + 30 * 10 * 2 + 32 * 8 * 2,
       totalSets: 5,
       prCount: 2,
       status: 'completed'
@@ -241,18 +262,12 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(interval);
   }, [restTimer.isActive, restTimer.targetEndTime, settings.soundEnabled, settings.hapticEnabled]);
 
-  // Calculate 1RM via Epley Formula: weight * (1 + reps / 30)
-  const calculate1RM = useCallback((weight: number, reps: number): number => {
-    if (reps <= 0 || weight <= 0) return 0;
-    if (reps === 1) return weight;
-    return Math.round(weight * (1 + reps / 30) * 10) / 10;
-  }, []);
-
-  // Find all-time best 1RM for an exercise
+  // Find all-time best 1RM for an exercise from workoutHistory
   const getBest1RM = useCallback(
     (exerciseId: string): number => {
       let max1RM = 0;
       workoutHistory.forEach((session) => {
+        if (session.status !== 'completed') return;
         session.exercises.forEach((ex) => {
           if (ex.exerciseId === exerciseId) {
             ex.sets.forEach((set) => {
@@ -266,7 +281,67 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       return max1RM;
     },
-    [workoutHistory, calculate1RM]
+    [workoutHistory]
+  );
+
+  // Synchronize volume, sets count, and PR recognition across exercises
+  const syncWorkoutMetrics = useCallback(
+    (rawExercises: WorkoutExercise[]): {
+      exercises: WorkoutExercise[];
+      totalVolume: number;
+      totalSets: number;
+      prCount: number;
+    } => {
+      let totalVolume = 0;
+      let totalSets = 0;
+      let prCount = 0;
+
+      const exercises = rawExercises.map((ex) => {
+        const bestHist = getBest1RM(ex.exerciseId);
+
+        // Find max 1RM achieved in this current active session for this exercise
+        let maxSession1RM = 0;
+        ex.sets.forEach((s) => {
+          if (s.completed && s.weight > 0 && s.reps > 0) {
+            const oneRM = calculate1RM(s.weight, s.reps);
+            if (oneRM > maxSession1RM) {
+              maxSession1RM = oneRM;
+            }
+          }
+        });
+
+        // Determine if this session sets a PR
+        const isSessionPR =
+          maxSession1RM > 0 && (bestHist === 0 ? true : maxSession1RM > bestHist);
+
+        let exerciseHasPRSet = false;
+
+        const sets = ex.sets.map((s) => {
+          if (s.completed) {
+            totalVolume += s.weight * s.reps;
+            totalSets += 1;
+
+            if (isSessionPR && s.weight > 0 && s.reps > 0) {
+              const oneRM = calculate1RM(s.weight, s.reps);
+              if (oneRM === maxSession1RM && !exerciseHasPRSet) {
+                exerciseHasPRSet = true;
+                return { ...s, isPR: true };
+              }
+            }
+          }
+          return { ...s, isPR: false };
+        });
+
+        if (exerciseHasPRSet) {
+          prCount += 1;
+        }
+
+        return { ...ex, sets };
+      });
+
+      return { exercises, totalVolume, totalSets, prCount };
+    },
+    [getBest1RM]
   );
 
   // Get previous set data for an exercise
@@ -274,12 +349,25 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (exerciseId: string, setIndex: number): { weight: number; reps: number } | null => {
       // Look back through history in reverse chronological order
       for (const session of workoutHistory) {
+        if (session.status !== 'completed') continue;
         const found = session.exercises.find((e) => e.exerciseId === exerciseId);
-        if (found && found.sets[setIndex] && found.sets[setIndex].completed) {
-          return {
-            weight: found.sets[setIndex].weight,
-            reps: found.sets[setIndex].reps
-          };
+        if (found) {
+          // Exact matching set index
+          if (found.sets[setIndex] && found.sets[setIndex].completed) {
+            return {
+              weight: found.sets[setIndex].weight,
+              reps: found.sets[setIndex].reps
+            };
+          }
+          // Fall back to the last completed set of that exercise
+          const completedSets = found.sets.filter((s) => s.completed);
+          if (completedSets.length > 0) {
+            const lastCompleted = completedSets[completedSets.length - 1];
+            return {
+              weight: lastCompleted.weight,
+              reps: lastCompleted.reps
+            };
+          }
         }
       }
       return null;
@@ -385,21 +473,30 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ]
       };
 
-      setActiveWorkout((prev) => (prev ? { ...prev, exercises: [...prev.exercises, newEx] } : prev));
+      setActiveWorkout((prev) => {
+        if (!prev) return prev;
+        const updatedRaw = [...prev.exercises, newEx];
+        const synced = syncWorkoutMetrics(updatedRaw);
+        return { ...prev, ...synced };
+      });
       if (settings.soundEnabled) soundFx.playTap();
     },
-    [activeWorkout, getPreviousSetData, settings.weightUnit, settings.soundEnabled]
+    [activeWorkout, getPreviousSetData, settings.weightUnit, settings.soundEnabled, syncWorkoutMetrics]
   );
 
   // Remove Exercise
-  const removeExerciseFromWorkout = useCallback((exerciseIndex: number) => {
-    setActiveWorkout((prev) => {
-      if (!prev) return prev;
-      const exercises = [...prev.exercises];
-      exercises.splice(exerciseIndex, 1);
-      return { ...prev, exercises };
-    });
-  }, []);
+  const removeExerciseFromWorkout = useCallback(
+    (exerciseIndex: number) => {
+      setActiveWorkout((prev) => {
+        if (!prev) return prev;
+        const exercises = [...prev.exercises];
+        exercises.splice(exerciseIndex, 1);
+        const synced = syncWorkoutMetrics(exercises);
+        return { ...prev, ...synced };
+      });
+    },
+    [syncWorkoutMetrics]
+  );
 
   // Add Set
   const addSet = useCallback(
@@ -428,40 +525,49 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
 
         targetEx.sets = [...targetEx.sets, newSet];
-        return { ...prev, exercises };
+        const synced = syncWorkoutMetrics(exercises);
+        return { ...prev, ...synced };
       });
       if (settings.soundEnabled) soundFx.playTap();
     },
-    [activeWorkout, getPreviousSetData, settings.soundEnabled]
+    [activeWorkout, getPreviousSetData, settings.soundEnabled, syncWorkoutMetrics]
   );
 
   // Remove Set
-  const removeSet = useCallback((exerciseIndex: number, setIndex: number) => {
-    setActiveWorkout((prev) => {
-      if (!prev) return prev;
-      const exercises = [...prev.exercises];
-      const targetEx = exercises[exerciseIndex];
-      if (!targetEx) return prev;
+  const removeSet = useCallback(
+    (exerciseIndex: number, setIndex: number) => {
+      setActiveWorkout((prev) => {
+        if (!prev) return prev;
+        const exercises = [...prev.exercises];
+        const targetEx = exercises[exerciseIndex];
+        if (!targetEx) return prev;
 
-      targetEx.sets.splice(setIndex, 1);
-      // Re-index remaining sets
-      targetEx.sets = targetEx.sets.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
-      return { ...prev, exercises };
-    });
-  }, []);
+        targetEx.sets.splice(setIndex, 1);
+        // Re-index remaining sets
+        targetEx.sets = targetEx.sets.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
+        const synced = syncWorkoutMetrics(exercises);
+        return { ...prev, ...synced };
+      });
+    },
+    [syncWorkoutMetrics]
+  );
 
   // Update Set fields
-  const updateSet = useCallback((exerciseIndex: number, setIndex: number, updates: Partial<WorkoutSet>) => {
-    setActiveWorkout((prev) => {
-      if (!prev) return prev;
-      const exercises = [...prev.exercises];
-      const targetEx = exercises[exerciseIndex];
-      if (!targetEx || !targetEx.sets[setIndex]) return prev;
+  const updateSet = useCallback(
+    (exerciseIndex: number, setIndex: number, updates: Partial<WorkoutSet>) => {
+      setActiveWorkout((prev) => {
+        if (!prev) return prev;
+        const exercises = [...prev.exercises];
+        const targetEx = exercises[exerciseIndex];
+        if (!targetEx || !targetEx.sets[setIndex]) return prev;
 
-      targetEx.sets[setIndex] = { ...targetEx.sets[setIndex], ...updates };
-      return { ...prev, exercises };
-    });
-  }, []);
+        targetEx.sets[setIndex] = { ...targetEx.sets[setIndex], ...updates };
+        const synced = syncWorkoutMetrics(exercises);
+        return { ...prev, ...synced };
+      });
+    },
+    [syncWorkoutMetrics]
+  );
 
   // Rest Timer Controls
   const startRestTimer = useCallback(
@@ -503,7 +609,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       let triggerTimer = false;
       let exName = '';
-      let isPR = false;
+      let isSetPR = false;
 
       setActiveWorkout((prev) => {
         if (!prev) return prev;
@@ -514,46 +620,30 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const currentSet = targetEx.sets[setIndex];
         const willBeCompleted = !currentSet.completed;
 
+        targetEx.sets[setIndex] = {
+          ...currentSet,
+          completed: willBeCompleted
+        };
+
+        const synced = syncWorkoutMetrics(exercises);
+
         if (willBeCompleted) {
           triggerTimer = true;
           const exMeta = INITIAL_EXERCISES.find((e) => e.id === targetEx.exerciseId);
           exName = exMeta ? exMeta.name : 'Rest';
 
-          // Check if this is a new PR
-          const current1RM = calculate1RM(currentSet.weight, currentSet.reps);
-          const bestHistorical1RM = getBest1RM(targetEx.exerciseId);
-
-          if (current1RM > 0 && (bestHistorical1RM === 0 || current1RM > bestHistorical1RM)) {
-            isPR = true;
+          // Check if the newly completed set became a PR
+          const updatedSet = synced.exercises[exerciseIndex]?.sets[setIndex];
+          if (updatedSet?.isPR) {
+            isSetPR = true;
           }
         }
 
-        targetEx.sets[setIndex] = {
-          ...currentSet,
-          completed: willBeCompleted,
-          isPR: willBeCompleted ? isPR : false
-        };
-
-        // Recalculate summary metrics
-        let totalVolume = 0;
-        let totalSets = 0;
-        let prCount = 0;
-
-        exercises.forEach((ex) => {
-          ex.sets.forEach((s) => {
-            if (s.completed) {
-              totalVolume += s.weight * s.reps;
-              totalSets += 1;
-              if (s.isPR) prCount += 1;
-            }
-          });
-        });
-
-        return { ...prev, exercises, totalVolume, totalSets, prCount };
+        return { ...prev, ...synced };
       });
 
       if (triggerTimer) {
-        if (isPR) {
+        if (isSetPR) {
           if (settings.soundEnabled) soundFx.playPRCelebration();
           if (settings.hapticEnabled) soundFx.triggerHaptic([50, 50, 100]);
         } else {
@@ -563,7 +653,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         startRestTimer(undefined, exName);
       }
     },
-    [activeWorkout, calculate1RM, getBest1RM, settings.soundEnabled, settings.hapticEnabled, startRestTimer]
+    [activeWorkout, settings.soundEnabled, settings.hapticEnabled, startRestTimer, syncWorkoutMetrics]
   );
 
   // Finish Workout
@@ -626,7 +716,6 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setExercises((prev) => {
       const updated = [...prev, newEx];
-      // Save only custom
       const customOnly = updated.filter((e) => !INITIAL_EXERCISES.some((ie) => ie.id === e.id));
       localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(customOnly));
       return updated;
@@ -638,7 +727,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSettings((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Calculate Muscle Fatigue Map
+  // Calculate Muscle Fatigue Map according to ABOT's exact scientific decay model
   const getMuscleFatigueMap = useCallback((): Record<MuscleGroup, MuscleFatigueInfo> => {
     const fatigueMap: Record<MuscleGroup, MuscleFatigueInfo> = {
       chest: { fatiguePct: 0, stage: 'fresh', readyInHours: 0 },
@@ -664,12 +753,11 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const now = Date.now();
-    const WINDOW_HOURS = 72;
 
     workoutHistory.forEach((session) => {
+      if (session.status !== 'completed') return;
       const sessionTime = session.finishedAt || session.startedAt;
       const hoursAgo = (now - sessionTime) / (1000 * 3600);
-      if (hoursAgo > WINDOW_HOURS) return;
 
       session.exercises.forEach((ex) => {
         const meta = INITIAL_EXERCISES.find((e) => e.id === ex.exerciseId);
@@ -678,38 +766,48 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const completedSets = ex.sets.filter((s) => s.completed).length;
         if (completedSets === 0) return;
 
-        // Base fatigue points: 15 per set for primary, 8 for secondary
-        const decayFactor = Math.max(0, 1 - hoursAgo / WINDOW_HOURS);
-
+        // Big muscles recover in 72 hours, small ones in 48 hours (ABOT architecture)
         meta.primaryMuscles.forEach((m) => {
           if (fatigueMap[m]) {
-            const added = completedSets * 18 * decayFactor;
-            fatigueMap[m].fatiguePct = Math.min(100, Math.round(fatigueMap[m].fatiguePct + added));
-            fatigueMap[m].lastTrainedAt = Math.max(fatigueMap[m].lastTrainedAt || 0, sessionTime);
+            const windowHours = BIG_MUSCLES.has(m) ? 72 : 48;
+            if (hoursAgo <= windowHours) {
+              const decayFactor = Math.max(0, 1 - hoursAgo / windowHours);
+              const added = completedSets * 18 * decayFactor;
+              fatigueMap[m].fatiguePct = Math.min(100, Math.round(fatigueMap[m].fatiguePct + added));
+              fatigueMap[m].lastTrainedAt = Math.max(fatigueMap[m].lastTrainedAt || 0, sessionTime);
+              fatigueMap[m].lastSets = (fatigueMap[m].lastSets || 0) + completedSets;
+            }
           }
         });
 
         meta.secondaryMuscles.forEach((m) => {
           if (fatigueMap[m]) {
-            const added = completedSets * 9 * decayFactor;
-            fatigueMap[m].fatiguePct = Math.min(100, Math.round(fatigueMap[m].fatiguePct + added));
+            const windowHours = BIG_MUSCLES.has(m) ? 72 : 48;
+            if (hoursAgo <= windowHours) {
+              const decayFactor = Math.max(0, 1 - hoursAgo / windowHours);
+              const added = completedSets * 9 * decayFactor;
+              fatigueMap[m].fatiguePct = Math.min(100, Math.round(fatigueMap[m].fatiguePct + added));
+              fatigueMap[m].lastTrainedAt = Math.max(fatigueMap[m].lastTrainedAt || 0, sessionTime);
+            }
           }
         });
       });
     });
 
-    // Assign stages
+    // Assign stages and recovery hours
     (Object.keys(fatigueMap) as MuscleGroup[]).forEach((m) => {
       const f = fatigueMap[m].fatiguePct;
-      if (f >= 75) {
+      const windowHours = BIG_MUSCLES.has(m) ? 72 : 48;
+
+      if (f >= 80) {
         fatigueMap[m].stage = 'exhausted';
-        fatigueMap[m].readyInHours = Math.round((f / 100) * 48);
-      } else if (f >= 45) {
+        fatigueMap[m].readyInHours = Math.round((f / 100) * windowHours);
+      } else if (f >= 50) {
         fatigueMap[m].stage = 'high';
-        fatigueMap[m].readyInHours = Math.round((f / 100) * 36);
+        fatigueMap[m].readyInHours = Math.round((f / 100) * (windowHours * 0.75));
       } else if (f >= 20) {
         fatigueMap[m].stage = 'recovering';
-        fatigueMap[m].readyInHours = Math.round((f / 100) * 24);
+        fatigueMap[m].readyInHours = Math.round((f / 100) * (windowHours * 0.5));
       } else {
         fatigueMap[m].stage = 'fresh';
         fatigueMap[m].readyInHours = 0;
@@ -719,17 +817,48 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return fatigueMap;
   }, [workoutHistory]);
 
-  // Calculate Streak in Weeks
+  // Calculate Streak in Weeks: True consecutive calendar weeks
   const getStreakWeeks = useCallback((): number => {
     if (workoutHistory.length === 0) return 0;
-    // Count active weeks
-    const weekTimestamps = new Set<string>();
+
+    const getWeekMonday = (timestamp: number): number => {
+      const date = new Date(timestamp);
+      date.setHours(0, 0, 0, 0);
+      const day = date.getDay(); // 0 is Sun, 1 is Mon...
+      const diff = (day === 0 ? -6 : 1) - day;
+      date.setDate(date.getDate() + diff);
+      return date.getTime();
+    };
+
+    const trainedWeeks = new Set<number>();
     workoutHistory.forEach((session) => {
-      const d = new Date(session.finishedAt || session.startedAt);
-      const weekYear = `${d.getFullYear()}-W${Math.ceil((d.getDate() + 6) / 7)}`;
-      weekTimestamps.add(weekYear);
+      if (session.status === 'completed') {
+        const time = session.finishedAt || session.startedAt;
+        if (time) trainedWeeks.add(getWeekMonday(time));
+      }
     });
-    return Math.max(1, weekTimestamps.size);
+
+    if (trainedWeeks.size === 0) return 0;
+
+    const nowMonday = getWeekMonday(Date.now());
+    const ONE_WEEK_MS = 7 * 86400000;
+
+    let checkWeek = nowMonday;
+    // Allow active streak if user trained this week OR last week
+    if (!trainedWeeks.has(checkWeek)) {
+      checkWeek -= ONE_WEEK_MS;
+      if (!trainedWeeks.has(checkWeek)) {
+        return 0; // Streak broken
+      }
+    }
+
+    let streak = 0;
+    while (trainedWeeks.has(checkWeek)) {
+      streak += 1;
+      checkWeek -= ONE_WEEK_MS;
+    }
+
+    return streak;
   }, [workoutHistory]);
 
   // Data Export / Import

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkout } from '../context/WorkoutContext';
 import { MuscleAnatomy } from './MuscleAnatomy';
-import { Flame, Play, Dumbbell, Clock, ChevronRight, Activity, Calendar } from 'lucide-react';
+import { Flame, Play, Dumbbell, Clock, ChevronRight, Activity, Calendar, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { INITIAL_EXERCISES } from '../data/exercises';
+import { MuscleGroup } from '../types';
 
 export const HomeView: React.FC = () => {
   const {
+    activeWorkout,
     workoutHistory,
     routines,
     settings,
@@ -15,6 +17,8 @@ export const HomeView: React.FC = () => {
     getStreakWeeks
   } = useWorkout();
 
+  const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | null>(null);
+
   const fatigueMap = getMuscleFatigueMap();
   const streak = getStreakWeeks();
 
@@ -22,11 +26,11 @@ export const HomeView: React.FC = () => {
   const todayRoutine = routines[0] || null;
 
   // Calculate quick totals
-  const totalVolumeAllTime = workoutHistory.reduce((sum, w) => sum + w.totalVolume, 0);
-  const totalWorkouts = workoutHistory.length;
+  const totalVolumeAllTime = workoutHistory.reduce((sum, w) => sum + (w.totalVolume || 0), 0);
+  const totalWorkouts = workoutHistory.filter((w) => w.status === 'completed').length;
 
   return (
-    <div className="pb-28 pt-4 px-4 max-w-[500px] mx-auto space-y-5">
+    <div className="pb-32 pt-4 px-4 max-w-[500px] mx-auto space-y-5">
       {/* App Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -47,8 +51,36 @@ export const HomeView: React.FC = () => {
         </div>
       </div>
 
-      {/* Planned Workout Wallet Card */}
-      {todayRoutine && (
+      {/* ACTIVE WORKOUT HERO CARD (if workout in progress) */}
+      {activeWorkout && activeWorkout.status === 'active' ? (
+        <div className="relative overflow-hidden rounded-3xl bg-surface border border-accent/40 p-5 shadow-[0_0_30px_rgba(204,255,0,0.15)] animate-in fade-in">
+          <div className="flex items-center justify-between mb-3">
+            <span className="px-2.5 py-0.5 rounded-full bg-accent/20 border border-accent/30 text-[11px] font-black text-accent uppercase tracking-wider flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-accent animate-ping" />
+              Workout in Progress
+            </span>
+            <span className="text-xs font-mono font-bold text-accent">
+              {Math.floor(activeWorkout.durationSeconds / 60)}:
+              {(activeWorkout.durationSeconds % 60).toString().padStart(2, '0')}
+            </span>
+          </div>
+
+          <h2 className="text-xl font-black text-text tracking-tight mb-1">{activeWorkout.title}</h2>
+          <p className="text-xs text-text-muted mb-4">
+            {activeWorkout.exercises.length} movements · {activeWorkout.totalSets} completed sets
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('workout')}
+            className="w-full py-3.5 rounded-xl bg-accent text-on-accent font-black text-sm flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(204,255,0,0.4)] hover:brightness-110 active:scale-[0.99] transition-all"
+          >
+            <Play size={16} className="fill-current" />
+            Continue Workout
+          </button>
+        </div>
+      ) : todayRoutine ? (
+        /* PLANNED ROUTINE CARD */
         <div className="relative overflow-hidden rounded-3xl bg-surface border border-accent/25 p-5 shadow-2xl">
           <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -91,24 +123,31 @@ export const HomeView: React.FC = () => {
             Start Workout
           </button>
         </div>
-      )}
+      ) : null}
 
-      {/* Muscle Recovery & Fatigue Heatmap */}
+      {/* Muscle Recovery & Fatigue Heatmap Card */}
       <div className="rounded-3xl bg-surface border border-line p-5 shadow-xl">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
             <h3 className="text-sm font-black text-text tracking-tight uppercase">Muscle Recovery Map</h3>
           </div>
-          <span className="text-[11px] font-semibold text-text-muted">72h Window</span>
+          <span className="text-[11px] font-semibold text-text-muted">Dynamic 72h / 48h</span>
         </div>
         <p className="text-xs text-text-muted mb-4">
-          Muscles recover dynamically based on your logged sets and workout volume.
+          Muscles recover dynamically based on volume, set intensity, and elapsed hours.
         </p>
 
-        {/* Anatomical Heatmap */}
-        <div className="rounded-2xl bg-surface-2/60 border border-line p-3 flex justify-center">
-          <MuscleAnatomy fatigueMap={fatigueMap} showToggle={true} width="100%" />
+        {/* Anatomical Heatmap SVG */}
+        <div className="rounded-2xl bg-surface-2/40 border border-line p-3 flex justify-center">
+          <MuscleAnatomy
+            fatigueMap={fatigueMap}
+            selectedMuscle={selectedMuscle}
+            onSelectMuscle={(m) => setSelectedMuscle((prev) => (prev === m ? null : m))}
+            showToggle={true}
+            showDetailCard={true}
+            width="100%"
+          />
         </div>
       </div>
 
@@ -120,9 +159,13 @@ export const HomeView: React.FC = () => {
             <span className="text-[11px] font-bold uppercase tracking-wider">Volume Lifted</span>
           </div>
           <span className="text-2xl font-black font-mono text-text">
-            {totalVolumeAllTime > 1000 ? `${(totalVolumeAllTime / 1000).toFixed(1)}k` : totalVolumeAllTime}
+            {totalVolumeAllTime >= 1000
+              ? `${(totalVolumeAllTime / 1000).toFixed(1)}k`
+              : totalVolumeAllTime}
           </span>
-          <span className="text-[10px] font-semibold text-text-muted">{settings.weightUnit} total across all sets</span>
+          <span className="text-[10px] font-semibold text-text-muted">
+            {settings.weightUnit} total across all sets
+          </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface border border-line flex flex-col">

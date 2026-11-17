@@ -290,11 +290,14 @@ export const WorkoutView: React.FC = () => {
                         <input
                           type="number"
                           step="0.5"
-                          value={set.weight || ''}
-                          onChange={(e) =>
-                            updateSet(exIdx, sIdx, { weight: parseFloat(e.target.value) || 0 })
-                          }
+                          min="0"
+                          value={set.weight === 0 ? '0' : (set.weight || '')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateSet(exIdx, sIdx, { weight: val === '' ? 0 : parseFloat(val) || 0 });
+                          }}
                           className="h-10 w-full rounded-lg bg-bg border border-line text-center text-sm font-bold font-mono text-text focus:outline-none focus:border-accent"
+                          placeholder="0"
                         />
                       </div>
 
@@ -303,11 +306,14 @@ export const WorkoutView: React.FC = () => {
                         <input
                           type="number"
                           step="1"
-                          value={set.reps || ''}
-                          onChange={(e) =>
-                            updateSet(exIdx, sIdx, { reps: parseInt(e.target.value, 10) || 0 })
-                          }
+                          min="0"
+                          value={set.reps === 0 ? '0' : (set.reps || '')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateSet(exIdx, sIdx, { reps: val === '' ? 0 : parseInt(val, 10) || 0 });
+                          }}
                           className="h-10 w-full rounded-lg bg-bg border border-line text-center text-sm font-bold font-mono text-text focus:outline-none focus:border-accent"
+                          placeholder="0"
                         />
                       </div>
 

@@ -107,4 +107,5 @@ export interface MuscleFatigueInfo {
   stage: MuscleFatigueStage;
   readyInHours: number;
   lastTrainedAt?: number;
+  lastSets?: number;
 }
