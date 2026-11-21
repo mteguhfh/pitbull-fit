@@ -21,6 +21,7 @@ Aplikasi strength training untuk web dan mobile — program latihan beban, anato
 - **Panduan gerakan** — modal detail dan video contoh per exercise.
 - **Share story** — ekspor ringkasan sesi jadi gambar untuk dibagikan.
 - **Tema gelap/terang** — tema liquid glass, plus dukungan bahasa Indonesia/Inggris.
+- **PWA offline** — bisa di-install ke home screen dan tetap terbuka tanpa internet.
 
 ## Stack
 
@@ -32,6 +33,7 @@ React 19 · TypeScript · Vite · Tailwind CSS · Capacitor · Vitest
 npm install
 npm run dev        # web dev server (port 3000)
 npm test           # unit test (vitest)
+npm run typecheck  # cek tipe saja
 npm run build      # build production ke dist/
 npm run preview    # preview hasil build
 ```

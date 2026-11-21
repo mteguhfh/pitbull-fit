@@ -1,17 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { WorkoutProvider, useWorkout } from './context/WorkoutContext';
 import { LiquidBottomNav } from './components/LiquidBottomNav';
 import { RestTimerBar } from './components/RestTimerBar';
 import { ActiveSessionStrip } from './components/ActiveSessionStrip';
-import { WorkoutSummaryModal } from './components/WorkoutSummaryModal';
-import { OnboardingModal } from './components/OnboardingModal';
 import { HomeView } from './components/HomeView';
-import { WorkoutView } from './components/WorkoutView';
-import { ExercisesView } from './components/ExercisesView';
-import { HistoryView } from './components/HistoryView';
-import { SettingsView } from './components/SettingsView';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+
+// Secondary screens and overlays load on demand to keep the initial bundle small.
+const WorkoutView = lazy(() => import('./components/WorkoutView').then(m => ({ default: m.WorkoutView })));
+const ExercisesView = lazy(() => import('./components/ExercisesView').then(m => ({ default: m.ExercisesView })));
+const HistoryView = lazy(() => import('./components/HistoryView').then(m => ({ default: m.HistoryView })));
+const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
+const OnboardingModal = lazy(() => import('./components/OnboardingModal').then(m => ({ default: m.OnboardingModal })));
+const WorkoutSummaryModal = lazy(() => import('./components/WorkoutSummaryModal').then(m => ({ default: m.WorkoutSummaryModal })));
+
+const ViewFallback: React.FC = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="w-6 h-6 rounded-full border-2 border-accent/30 border-t-accent animate-spin" />
+  </div>
+);
 
 const MainApp: React.FC = () => {
   const { activeTab, settings, updateSettings } = useWorkout();
@@ -30,24 +38,28 @@ const MainApp: React.FC = () => {
 
       {/* Onboarding Carousel Overlay */}
       {showOnboarding && (
-        <OnboardingModal
-          onComplete={() => {
-            setShowOnboarding(false);
-            updateSettings({ hasSeenOnboarding: true });
-          }}
-        />
+        <Suspense fallback={null}>
+          <OnboardingModal
+            onComplete={() => {
+              setShowOnboarding(false);
+              updateSettings({ hasSeenOnboarding: true });
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Main View Container with Smooth View Fade */}
       <main className="w-full relative z-10 transition-opacity duration-200 pb-[var(--bottom-nav-clearance)]">
         <div key={activeTab} className="animate-in fade-in duration-150">
-          {activeTab === 'home' && <HomeView />}
-          {activeTab === 'workout' && <WorkoutView />}
-          {activeTab === 'exercises' && <ExercisesView />}
-          {(activeTab === 'history' || activeTab === 'profile') && <HistoryView />}
-          {activeTab === 'settings' && (
-            <SettingsView onReplayOnboarding={() => setShowOnboarding(true)} />
-          )}
+          <Suspense fallback={<ViewFallback />}>
+            {activeTab === 'home' && <HomeView />}
+            {activeTab === 'workout' && <WorkoutView />}
+            {activeTab === 'exercises' && <ExercisesView />}
+            {(activeTab === 'history' || activeTab === 'profile') && <HistoryView />}
+            {activeTab === 'settings' && (
+              <SettingsView onReplayOnboarding={() => setShowOnboarding(true)} />
+            )}
+          </Suspense>
         </div>
       </main>
 
@@ -61,7 +73,9 @@ const MainApp: React.FC = () => {
       <LiquidBottomNav />
 
       {/* Workout Completion Summary Celebration Modal */}
-      <WorkoutSummaryModal />
+      <Suspense fallback={null}>
+        <WorkoutSummaryModal />
+      </Suspense>
     </div>
   );
 };
