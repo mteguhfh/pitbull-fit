@@ -23,7 +23,7 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
     "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.75.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -43,6 +43,6 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   }
 }
