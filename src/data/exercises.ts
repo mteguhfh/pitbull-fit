@@ -9,6 +9,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['triceps', 'shoulders'],
     equipment: 'barbell',
     defaultRestSeconds: 120,
+    videoEmbedId: 'rT7DgCr-3pg',
+    tempo: '3-1-1-0',
+    tips: ['Keep wrists stacked over elbows', 'Drive feet through the ground', 'Retract scapula before unracking'],
     instructions: [
       'Lie flat on the bench with eyes under the bar.',
       'Grip the bar slightly wider than shoulder-width.',
@@ -24,6 +27,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['shoulders', 'triceps'],
     equipment: 'dumbbell',
     defaultRestSeconds: 90,
+    videoEmbedId: '0G2_XX7435M',
+    tempo: '3-0-1-0',
+    tips: ['Set bench angle to 30-45 degrees', 'Keep elbows at a 45 degree angle', 'Touch dumbbells softly at top'],
     instructions: [
       'Set bench to 30-45 degree incline.',
       'Kick dumbbells up to shoulder level.',
@@ -39,6 +45,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['shoulders'],
     equipment: 'bodyweight',
     defaultRestSeconds: 90,
+    videoEmbedId: '2z8JmcrW-As',
+    tempo: '2-1-1-0',
+    tips: ['Lean forward 15° to focus chest', 'Go down until upper arms are parallel', 'Avoid shrugging shoulders'],
     instructions: [
       'Grip parallel bars and lock elbows at top.',
       'Lean slightly forward to bias chest, or keep upright for triceps.',
@@ -54,6 +63,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['shoulders'],
     equipment: 'cable',
     defaultRestSeconds: 60,
+    videoEmbedId: 'taI4XduLp4M',
+    tempo: '2-1-1-1',
+    tips: ['Slight bend in elbows throughout', 'Squeeze chest hard at crossover', 'Controlled eccentric stretch'],
     instructions: [
       'Set pulleys to chest height.',
       'Step forward into a staggered stance with slight forward lean.',
@@ -69,6 +81,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['triceps', 'traps', 'upper-back'],
     equipment: 'barbell',
     defaultRestSeconds: 120,
+    videoEmbedId: '2yjwXTZQDDI',
+    tempo: '2-0-1-0',
+    tips: ['Brace core and squeeze glutes', 'Move head through once bar clears forehead', 'Straight vertical bar path'],
     instructions: [
       'Clean or unrack bar onto front deltoids and clavicle.',
       'Squeeze glutes and brace core tightly.',
@@ -84,6 +99,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['traps'],
     equipment: 'dumbbell',
     defaultRestSeconds: 60,
+    videoEmbedId: '3VcKaXpzqRo',
+    tempo: '2-1-1-0',
+    tips: ['Lead with elbows not wrists', 'Slight lean forward', 'Stay within scaption plane'],
     instructions: [
       'Stand upright holding dumbbells at sides.',
       'Lead with elbows and raise arms out to sides until parallel to floor.',
@@ -99,6 +117,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['upper-back'],
     equipment: 'cable',
     defaultRestSeconds: 60,
+    videoEmbedId: 'rep-qVOkqgk',
+    tempo: '2-1-1-1',
+    tips: ['Pull toward eye level', 'Externally rotate elbows backward', 'Target rear delts and lower traps'],
     instructions: [
       'Attach rope to upper pulley.',
       'Pull toward eye level while spreading hands apart.',
@@ -114,6 +135,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['lower_back', 'traps', 'forearms'],
     equipment: 'barbell',
     defaultRestSeconds: 180,
+    videoEmbedId: 'op9kVnSso6Q',
+    tempo: '2-1-1-0',
+    tips: ['Bar positioned over midfoot', 'Engage lats to keep bar close to shins', 'Drive floor away with legs'],
     instructions: [
       'Stand with mid-foot under barbell with hip-width stance.',
       'Hinge at hips and grip bar just outside knees.',
@@ -129,6 +153,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['biceps', 'shoulders', 'lower_back'],
     equipment: 'barbell',
     defaultRestSeconds: 90,
+    videoEmbedId: 'FWJR5Ve8gkQ',
+    tempo: '2-1-1-0',
+    tips: ['Hinge torso to 45 degrees', 'Pull elbows back past ribs', 'Keep neck in neutral alignment'],
     instructions: [
       'Hinge at hips until torso is roughly 45 degrees to floor.',
       'Pull bar toward lower abdomen / belly button.',
@@ -144,6 +171,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['biceps', 'back'],
     equipment: 'cable',
     defaultRestSeconds: 75,
+    videoEmbedId: 'CAwf7n6Luuc',
+    tempo: '3-0-1-1',
+    tips: ['Depress shoulder blades before pulling', 'Pull bar to collarbone', 'Full stretch at top'],
     instructions: [
       'Sit facing machine with knees secured under pads.',
       'Grip wide bar with overhand grip.',
@@ -159,6 +189,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['biceps', 'forearms'],
     equipment: 'bodyweight',
     defaultRestSeconds: 90,
+    videoEmbedId: 'eGo4IYlbE5g',
+    tempo: '2-0-1-1',
+    tips: ['Initiate pull with back, not arms', 'Chest up towards the bar', 'Full dead-hang stretch at bottom'],
     instructions: [
       'Hang from bar with hands slightly wider than shoulder-width.',
       'Pull body up until chin clears the bar.',
@@ -174,6 +207,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['hamstrings', 'lower_back', 'adductors'],
     equipment: 'barbell',
     defaultRestSeconds: 150,
+    videoEmbedId: 'bEv6CCg2BC8',
+    tempo: '3-1-1-0',
+    tips: ['Knees track over toes', 'Brace core with deep breath', 'Hit parallel depth or lower'],
     instructions: [
       'Rest bar securely on upper traps (high bar) or rear delts (low bar).',
       'Set feet shoulder-width apart, toes angled out slightly.',
@@ -189,6 +225,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['lower_back', 'forearms'],
     equipment: 'barbell',
     defaultRestSeconds: 120,
+    videoEmbedId: '_oyxCn2iSjU',
+    tempo: '3-1-1-0',
+    tips: ['Hips push back with soft knees', 'Keep bar glued against shins', 'Stop when hips stop traveling backward'],
     instructions: [
       'Stand holding barbell with soft knees.',
       'Push hips back while keeping bar gliding against thighs and shins.',
@@ -204,6 +243,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['glutes', 'calves'],
     equipment: 'machine',
     defaultRestSeconds: 90,
+    videoEmbedId: 'IZxyjW7MPJQ',
+    tempo: '3-0-1-0',
+    tips: ['Do not aggressively hyperextend knees', 'Keep lower back pinned to backrest', 'Feet shoulder width on plate'],
     instructions: [
       'Sit comfortably in sled machine with feet hip-width on footplate.',
       'Release safety handles and lower sled until knees reach 90 degrees.',
@@ -218,6 +260,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['calves'],
     equipment: 'machine',
     defaultRestSeconds: 60,
+    videoEmbedId: 'ELOCsoDSmrg',
+    tempo: '2-1-1-1',
+    tips: ['Dorsiflex toes for hamstring recruitment', 'Do not lift hips off pad', 'Slow 2-second negative'],
     instructions: [
       'Adjust pad to sit just behind Achilles tendon.',
       'Curl weight toward glutes, flexing hamstrings hard.',
@@ -232,6 +277,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'machine',
     defaultRestSeconds: 60,
+    videoEmbedId: 'YyvSfV-YXQQ',
+    tempo: '2-1-1-1',
+    tips: ['Pause 1 second at full extension', 'Control descent without slamming weights', 'Align knees with machine fulcrum'],
     instructions: [
       'Sit with back against pad and roller on lower shins.',
       'Extend knees until legs are straight, squeezing quadriceps.',
@@ -246,6 +294,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'machine',
     defaultRestSeconds: 60,
+    videoEmbedId: 'gwLzBJYoWlI',
+    tempo: '3-2-1-1',
+    tips: ['Full 2s deep stretch at bottom', 'Explode up onto balls of feet', 'Hold peak contraction for 1 second'],
     instructions: [
       'Position balls of feet on block with heels hanging off.',
       'Lower heels deep for a full stretch at bottom.',
@@ -260,6 +311,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['forearms'],
     equipment: 'barbell',
     defaultRestSeconds: 60,
+    videoEmbedId: 'kwG2ipFRgfo',
+    tempo: '3-0-1-1',
+    tips: ['Elbows locked to sides of torso', 'Zero momentum or lower back swing', 'Full peak squeeze at top'],
     instructions: [
       'Stand tall with underhand grip on barbell.',
       'Curl bar up toward shoulders while keeping elbows pinned to ribs.',
@@ -274,6 +328,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['forearms'],
     equipment: 'dumbbell',
     defaultRestSeconds: 60,
+    videoEmbedId: 'soxrZlIl35U',
+    tempo: '3-0-1-1',
+    tips: ['Incline bench at 45 degrees', 'Full arm extension at bottom', 'Supinate palms upward through curl'],
     instructions: [
       'Lie back on 45-degree incline bench with arms hanging.',
       'Curl dumbbells simultaneously, supinating wrists at top.',
@@ -288,6 +345,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'cable',
     defaultRestSeconds: 60,
+    videoEmbedId: '2-LAMcpzODU',
+    tempo: '2-1-1-1',
+    tips: ['Keep elbows motionless by sides', 'Lock triceps out forcefully at bottom', 'Resist the weight back to 90 degrees'],
     instructions: [
       'Grip straight bar or rope at chest height.',
       'Keep elbows tucked by sides and push down until arms are locked.',
@@ -302,6 +362,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['shoulders'],
     equipment: 'barbell',
     defaultRestSeconds: 75,
+    videoEmbedId: 'd_KZxkY_0cM',
+    tempo: '3-0-1-0',
+    tips: ['Upper arms tilted slightly back', 'Bend only at elbow joints', 'Lower bar towards crown of head'],
     instructions: [
       'Lie on flat bench with EZ bar extended above chest.',
       'Hinge at elbows to lower bar toward forehead or crown of head.',
@@ -316,6 +379,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['obliques'],
     equipment: 'cable',
     defaultRestSeconds: 60,
+    videoEmbedId: '2fORO4v1r4A',
+    tempo: '2-1-1-1',
+    tips: ['Curl spine downward like a shrimp', 'Do not sit back onto heels', 'Hold crunch contraction 1 second'],
     instructions: [
       'Kneel in front of cable with rope held beside ears.',
       'Flex spine downward, bringing elbows towards thighs.',
@@ -330,6 +396,9 @@ export const INITIAL_EXERCISES: Exercise[] = [
     secondaryMuscles: ['forearms'],
     equipment: 'bodyweight',
     defaultRestSeconds: 60,
+    videoEmbedId: 'Pr1ieGZ5tkQ',
+    tempo: '2-1-1-0',
+    tips: ['Posterior pelvic tilt initiates lift', 'Avoid swinging or using momentum', 'Slow controlled return to dead hang'],
     instructions: [
       'Hang from pull-up bar with arms extended.',
       'Raise legs or knees up towards chest by curling pelvis upward.',

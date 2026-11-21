@@ -319,5 +319,63 @@ describe('Pitbull Fit Training Engine', () => {
         });
       });
     });
+
+    it('has valid video demonstration embed IDs, tempos, and form cues for all exercises', () => {
+      INITIAL_EXERCISES.forEach((ex) => {
+        expect(ex.videoEmbedId).toBeDefined();
+        expect(typeof ex.videoEmbedId).toBe('string');
+        expect(ex.videoEmbedId!.length).toBeGreaterThan(3);
+        // YouTube embed IDs should be alphanumeric with - or _
+        expect(ex.videoEmbedId).toMatch(/^[a-zA-Z0-9_-]+$/);
+
+        expect(ex.tempo).toBeDefined();
+        expect(typeof ex.tempo).toBe('string');
+        expect(ex.tempo).toMatch(/^\d-\d-\d-\d$/);
+
+        expect(ex.tips).toBeDefined();
+        expect(Array.isArray(ex.tips)).toBe(true);
+        expect(ex.tips!.length).toBeGreaterThanOrEqual(2);
+      });
+    });
+  });
+
+  describe('Biomechanical Cadence & Kinematic Motion System', () => {
+    // Tests for phase calculation logic in ExerciseVideoPlayer
+    function getPhase(progress: number): 'eccentric' | 'isometric' | 'concentric' {
+      if (progress < 48) return 'eccentric';
+      if (progress < 62) return 'isometric';
+      return 'concentric';
+    }
+
+    it('correctly maps rep progress percentage to physiological contraction phases', () => {
+      expect(getPhase(0)).toBe('eccentric');
+      expect(getPhase(25)).toBe('eccentric');
+      expect(getPhase(47.9)).toBe('eccentric');
+      expect(getPhase(48)).toBe('isometric');
+      expect(getPhase(55)).toBe('isometric');
+      expect(getPhase(61.9)).toBe('isometric');
+      expect(getPhase(62)).toBe('concentric');
+      expect(getPhase(99.9)).toBe('concentric');
+    });
+
+    it('calculates smooth kinematic coordinates along the quadratic bezier path', () => {
+      const p0x = 25, p0y = 90;
+      const p1x = 80, p1y = 20;
+      const p2x = 135, p2y = 90;
+
+      for (let u = 0; u <= 1; u += 0.1) {
+        const arcParam = 0.15 + u * 0.7;
+        const curArcX = (1 - arcParam) * (1 - arcParam) * p0x + 2 * (1 - arcParam) * arcParam * p1x + arcParam * arcParam * p2x;
+        const curArcY = (1 - arcParam) * (1 - arcParam) * p0y + 2 * (1 - arcParam) * arcParam * p1y + arcParam * arcParam * p2y;
+
+        expect(Number.isFinite(curArcX)).toBe(true);
+        expect(Number.isFinite(curArcY)).toBe(true);
+        expect(curArcX).toBeGreaterThanOrEqual(25);
+        expect(curArcX).toBeLessThanOrEqual(135);
+        expect(curArcY).toBeGreaterThanOrEqual(20);
+        expect(curArcY).toBeLessThanOrEqual(90);
+      }
+    });
   });
 });
+

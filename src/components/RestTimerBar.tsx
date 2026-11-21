@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from './Card';
 import { useWorkout } from '../context/WorkoutContext';
 import { Timer, Plus, Minus, X } from 'lucide-react';
 
@@ -13,12 +14,19 @@ export const RestTimerBar: React.FC = () => {
   const progressPct = Math.min(100, Math.max(0, (restTimer.remainingSeconds / restTimer.totalSeconds) * 100));
 
   return (
-    <div className="fixed bottom-[88px] inset-x-0 mx-auto max-w-[500px] px-4 z-40 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-      <div className="relative overflow-hidden rounded-2xl bg-surface/90 backdrop-blur-xl border border-accent/30 shadow-[0_8px_32px_rgba(0,0,0,0.6)] p-3 text-text">
+    <div className="fixed bottom-[calc(var(--bottom-nav-clearance)+68px)] inset-x-0 mx-auto max-w-[500px] px-4 z-40 transition duration-300 animate-in fade-in slide-in-from-bottom-4">
+      <Card
+        radius="card"
+        padding="12px"
+        variant="accent"
+        className="relative overflow-hidden bg-[#14141d]/96 text-text"
+      >
         {/* Depleting neon progress line at bottom */}
         <div className="absolute inset-x-0 bottom-0 h-1 bg-zinc-800">
           <div
-            className="h-full bg-accent transition-all duration-300 shadow-[0_0_8px_#ccff00]"
+            className={`h-full bg-accent transition duration-300 ${
+              restTimer.remainingSeconds <= 10 ? 'animate-pulse' : ''
+            }`}
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -26,7 +34,7 @@ export const RestTimerBar: React.FC = () => {
         <div className="flex items-center justify-between gap-3">
           {/* Left: Icon & Label */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="size-9 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center text-accent shrink-0">
+            <div className="size-9 rounded-xl bg-accent/20 border border-accent/35 flex items-center justify-center text-accent shrink-0">
               <Timer size={18} className="animate-pulse" />
             </div>
             <div className="min-w-0">
@@ -62,14 +70,14 @@ export const RestTimerBar: React.FC = () => {
             <button
               type="button"
               onClick={skipRestTimer}
-              className="size-9 rounded-lg bg-surface-2 hover:bg-red-500/20 border border-line hover:border-red-500/40 text-text-muted hover:text-red-400 transition-colors flex items-center justify-center active:scale-95 ml-1"
+              className="size-9 rounded-lg bg-surface-2 hover:bg-red-500/20 border border-line hover:border-red-500/40 text-text-muted hover:text-red-600 dark:text-red-400 transition-colors flex items-center justify-center active:scale-95 ml-1"
               title="Skip rest"
             >
               <X size={16} />
             </button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

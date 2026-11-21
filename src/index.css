@@ -2,17 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+/* Self-hosted so a cold start never waits on a third-party stylesheet round trip.
+   Both files are variable fonts: one file covers every weight in use. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono.woff2') format('woff2');
+  font-weight: 500 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root,
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #09090c;
+  --color-surface: #121217;
+  --color-surface-2: #1a1a22;
+  --color-surface-3: #242430;
+  --color-card-bg: var(--color-surface);
+  --color-card-border: rgba(255, 255, 255, 0.08);
+  --color-card-shadow: rgba(0, 0, 0, 0.35);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+  --color-text: #fafafa;
+  --color-text-muted: #8e8e99;
+  --color-glass-tint: rgba(147, 27, 38, 0.1);
+  --color-accent: #931b26;
+  --color-accent-dim: #68131b;
+  --color-accent-bright: #b32230;
+  --color-accent-glow: rgba(147, 27, 38, 0.45);
+  --color-accent-subtle: rgba(147, 27, 38, 0.15);
+  --color-accent-veil: rgba(147, 27, 38, 0.1);
+  --color-pr: #eab308;
+}
+
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f4f5f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #e9ecf2;
+  --color-surface-3: #dce0ea;
+  --color-card-bg: var(--color-surface);
+  --color-card-border: rgba(0, 0, 0, 0.08);
+  --color-card-shadow: transparent;
+  --color-line: rgba(0, 0, 0, 0.08);
+  --color-line-strong: rgba(0, 0, 0, 0.16);
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-glass-tint: rgba(255, 255, 255, 0.4);
+  --color-accent: #931b26;
+  --color-accent-dim: #68131b;
+  --color-accent-bright: #b32230;
+  --color-accent-glow: rgba(147, 27, 38, 0.25);
+  --color-accent-subtle: rgba(147, 27, 38, 0.1);
+  --color-accent-veil: rgba(147, 27, 38, 0.07);
+  --color-pr: #ca8a04;
+}
+
+:root {
+  --bottom-nav-height: 62px;
+  --bottom-nav-gap: 12px;
+  --bottom-nav-clearance: calc(var(--bottom-nav-height) + var(--bottom-nav-gap) * 2 + env(safe-area-inset-bottom, 0px));
+}
+
+html, body {
   margin: 0;
-  background-color: #09090b;
-  color: #fafafa;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-attachment: fixed;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Custom scrollbar */
@@ -31,10 +106,212 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(147, 27, 38, 0.4);
 }
 
-/* Neon glow helper */
-.neon-glow {
-  box-shadow: 0 0 20px rgba(204, 255, 0, 0.4);
+/* Pop-in animation for completed sets */
+@keyframes set-done {
+  0% { transform: scale(0.92); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
+
+.animate-set-done {
+  animation: set-done 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Mascot Cyber Eye Blinking Keyframes (Blinks smoothly every 4.5 seconds) */
+@keyframes pitbull-blink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  94%, 96% {
+    transform: scaleY(0.1);
+    opacity: 0.3;
+  }
+  98% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.animate-pitbull-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pitbull-blink 4.5s ease-in-out infinite;
+}
+
+/* Smooth Fluid UI Spring & Bezier Transitions */
+.transition-fluid {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-duration: 300ms;
+}
+
+.ease-fluid {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tailwind Animate Emulation & Fluid Transition Keyframes */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1));
+  }
+}
+
+.animate-in {
+  animation-name: enter;
+  animation-duration: var(--tw-enter-duration, 250ms);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.animate-out {
+  animation-name: exit;
+  animation-duration: var(--tw-exit-duration, 200ms);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.fade-in,
+.fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+.fade-out,
+.fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+.zoom-in-90 {
+  --tw-enter-scale: 0.90;
+}
+
+.zoom-in-\[0\.99\],
+.zoom-in-99 {
+  --tw-enter-scale: 0.99;
+}
+
+.zoom-in-\[0\.98\] {
+  --tw-enter-scale: 0.98;
+}
+
+.slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+.slide-in-from-top-4 {
+  --tw-enter-translate-y: -1rem;
+}
+
+.slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+.slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+.slide-in-from-bottom-6 {
+  --tw-enter-translate-y: 1.5rem;
+}
+
+.duration-150 {
+  --tw-enter-duration: 150ms;
+}
+
+.duration-200 {
+  --tw-enter-duration: 200ms;
+}
+
+.duration-300 {
+  --tw-enter-duration: 300ms;
+}
+
+.duration-500 {
+  --tw-enter-duration: 500ms;
+}
+
+/* GPU Hardware Acceleration Layer Helper */
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+/* Light Mode Overrides for Hardcoded Dark Classes */
+.light .bg-\[\#13131c\]\/95,
+.light .bg-\[\#13131c\]\/98,
+.light .bg-\[\#13131c\]\/96,
+.light .bg-\[\#13131c\],
+.light .bg-\[\#14141d\]\/96,
+.light .bg-\[\#0f0f14\],
+.light .bg-\[\#1a1a24\],
+.light .bg-\[\#181824\]\/90,
+.light .bg-\[\#0a0a0f\]\/95,
+.light .bg-\[\#14141b\] {
+  background-color: var(--color-card-bg) !important;
+}
+
+.light .border-white\/12,
+.light .border-white\/15,
+.light .border-white\/10,
+.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .shadow-\[0_16px_40px_rgba\(0\,0\,0\,0\.9\)\],
+.light .shadow-\[0_20px_48px_rgba\(0\,0\,0\,0\.9\)\],
+.light .shadow-\[0_16px_36px_rgba\(0\,0\,0\,0\.8\)\],
+.light .shadow-\[0_16px_40px_rgba\(0\,0\,0\,0\.85\)\],
+.light .shadow-\[0_12px_32px_rgba\(0\,0\,0\,0\.85\)\],
+.light .shadow-\[0_8px_32px_rgba\(0\,0\,0\,0\.85\)\],
+.light .shadow-\[0_8px_32px_rgba\(0\,0\,0\,0\.7\)\] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light theme card borders and shadow refinements */
+.light .lg-glass {
+  border-color: var(--color-card-border) !important;
+  box-shadow: none !important;
+}
+
+/* Global motion budget: transforms and opacity only, and let the OS opt out. */
+:root {
+  --ease-out-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Ensure buttons and badges with accent backgrounds maintain sharp crisp white text */
+.text-on-accent,
+.bg-accent,
+.bg-accent-bright {
+  color: #ffffff;
+}
+
+
+

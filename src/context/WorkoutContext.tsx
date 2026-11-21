@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { INITIAL_EXERCISES, INITIAL_ROUTINES } from '../data/exercises';
 import { soundFx } from '../utils/audio';
+import { TRANSLATIONS, TranslationKey, Language } from '../utils/i18n';
 
 interface RestTimerState {
   isActive: boolean;
@@ -28,12 +29,13 @@ interface WorkoutContextType {
   routines: Routine[];
   settings: UserSettings;
   restTimer: RestTimerState;
-  activeTab: 'home' | 'workout' | 'exercises' | 'history' | 'settings';
+  activeTab: 'home' | 'workout' | 'exercises' | 'history' | 'profile' | 'settings';
   showSummaryModal: boolean;
   lastCompletedWorkout: WorkoutSession | null;
 
   // Navigation
-  setActiveTab: (tab: 'home' | 'workout' | 'exercises' | 'history' | 'settings') => void;
+  setActiveTab: (tab: 'home' | 'workout' | 'exercises' | 'history' | 'profile' | 'settings') => void;
+  openSummaryModal: (workout?: WorkoutSession) => void;
   closeSummaryModal: () => void;
 
   // Active Workout Actions
@@ -46,6 +48,8 @@ interface WorkoutContextType {
   removeSet: (exerciseIndex: number, setIndex: number) => void;
   updateSet: (exerciseIndex: number, setIndex: number, updates: Partial<WorkoutSet>) => void;
   toggleSetCompleted: (exerciseIndex: number, setIndex: number) => void;
+  updateWorkoutTitle: (title: string) => void;
+  updateExerciseNotes: (exerciseIndex: number, notes: string) => void;
 
   // Rest Timer Actions
   startRestTimer: (seconds?: number, exerciseName?: string) => void;
@@ -57,7 +61,10 @@ interface WorkoutContextType {
   deleteRoutine: (id: string) => void;
   addCustomExercise: (exercise: Omit<Exercise, 'id'>) => void;
 
-  // Settings & Utilities
+  // Settings, Profile & Utilities
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey) => string;
   updateSettings: (updates: Partial<UserSettings>) => void;
   getBest1RM: (exerciseId: string) => number;
   getMuscleFatigueMap: () => Record<MuscleGroup, MuscleFatigueInfo>;
@@ -72,7 +79,19 @@ const DEFAULT_SETTINGS: UserSettings = {
   soundEnabled: true,
   hapticEnabled: true,
   hasSeenOnboarding: false,
-  theme: 'oled'
+  theme: 'dark',
+  language: 'id',
+  profile: {
+    heightCm: 175,
+    weightKg: 70,
+    age: 25,
+    gender: 'male',
+    bmi: 22.9,
+    bmiCategory: 'normal',
+    goal: 'maintain',
+    dailyCalories: 2200,
+    dailyProteinGrams: 140
+  }
 };
 
 const STORAGE_KEYS = {
@@ -118,7 +137,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'home' | 'workout' | 'exercises' | 'history' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'workout' | 'exercises' | 'history' | 'profile' | 'settings'>('home');
 
   // Exercises
   const [exercises, setExercises] = useState<Exercise[]>(() => {
@@ -147,40 +166,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    // Seed initial demo past workout for instant visual engagement
-    const now = Date.now();
-    const demoPast: WorkoutSession = {
-      id: 'demo-session-1',
-      title: 'Push Day (Chest, Shoulders, Triceps)',
-      routineId: 'push-day',
-      startedAt: now - 86400000 * 2,
-      finishedAt: now - 86400000 * 2 + 3600000,
-      durationSeconds: 3600,
-      exercises: [
-        {
-          id: 'ex-1',
-          exerciseId: 'bench-press',
-          sets: [
-            { id: 's1', setNumber: 1, type: 'normal', weight: 80, reps: 8, completed: true, isPR: false },
-            { id: 's2', setNumber: 2, type: 'normal', weight: 85, reps: 6, completed: true, isPR: true },
-            { id: 's3', setNumber: 3, type: 'normal', weight: 80, reps: 7, completed: true, isPR: false }
-          ]
-        },
-        {
-          id: 'ex-2',
-          exerciseId: 'incline-dumbbell-press',
-          sets: [
-            { id: 's4', setNumber: 1, type: 'normal', weight: 30, reps: 10, completed: true, isPR: false },
-            { id: 's5', setNumber: 2, type: 'normal', weight: 32, reps: 8, completed: true, isPR: true }
-          ]
-        }
-      ],
-      totalVolume: 80 * 8 + 85 * 6 + 80 * 7 + 30 * 10 * 2 + 32 * 8 * 2,
-      totalSets: 5,
-      prCount: 2,
-      status: 'completed'
-    };
-    return [demoPast];
+    return [];
   });
 
   // Active Workout
@@ -209,6 +195,25 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }, [settings]);
 
+  // Sync Theme (Dark vs Light) with DOM root and color-scheme
+  useEffect(() => {
+    const isLight = settings.theme === 'light';
+    const root = document.documentElement;
+    if (isLight) {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      root.setAttribute('data-theme', 'light');
+      root.style.colorScheme = 'light';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f4f5f8');
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+      root.style.colorScheme = 'dark';
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#08080a');
+    }
+  }, [settings.theme]);
+
   // Save History
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(workoutHistory));
@@ -223,18 +228,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [activeWorkout]);
 
-  // Live Workout Duration Timer ticker
-  useEffect(() => {
-    if (!activeWorkout || activeWorkout.status !== 'active') return;
-    const interval = setInterval(() => {
-      setActiveWorkout((prev) => {
-        if (!prev || prev.status !== 'active') return prev;
-        const durationSeconds = Math.max(0, Math.floor((Date.now() - prev.startedAt) / 1000));
-        return { ...prev, durationSeconds };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [activeWorkout?.status, activeWorkout?.startedAt]);
+  // `startedAt` is the source of truth for elapsed time. Components read the
+  // clock themselves instead of a 1 Hz context mutation, so the timer does not
+  // re-render the whole active-workout tree (and re-run its localStorage write).
 
   // Live Rest Timer countdown ticker
   const timerCompleteRef = useRef(false);
@@ -557,17 +553,43 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (exerciseIndex: number, setIndex: number, updates: Partial<WorkoutSet>) => {
       setActiveWorkout((prev) => {
         if (!prev) return prev;
-        const exercises = [...prev.exercises];
-        const targetEx = exercises[exerciseIndex];
+        const targetEx = prev.exercises[exerciseIndex];
         if (!targetEx || !targetEx.sets[setIndex]) return prev;
 
-        targetEx.sets[setIndex] = { ...targetEx.sets[setIndex], ...updates };
+        // Copy every level we touch: React bails out when the state object
+        // keeps its identity, so in-place mutation silently drops the update.
+        const exercises = prev.exercises.map((ex, idx) =>
+          idx === exerciseIndex
+            ? {
+                ...ex,
+                sets: ex.sets.map((set, sIdx) =>
+                  sIdx === setIndex ? { ...set, ...updates } : set
+                )
+              }
+            : ex
+        );
         const synced = syncWorkoutMetrics(exercises);
         return { ...prev, ...synced };
       });
     },
     [syncWorkoutMetrics]
   );
+
+  // Update workout title
+  const updateWorkoutTitle = useCallback((title: string) => {
+    setActiveWorkout((prev) => (prev ? { ...prev, title } : prev));
+  }, []);
+
+  // Update per-exercise note
+  const updateExerciseNotes = useCallback((exerciseIndex: number, notes: string) => {
+    setActiveWorkout((prev) => {
+      if (!prev) return prev;
+      const exercises = prev.exercises.map((ex, idx) =>
+        idx === exerciseIndex ? { ...ex, notes } : ex
+      );
+      return { ...prev, exercises };
+    });
+  }, []);
 
   // Rest Timer Controls
   const startRestTimer = useCallback(
@@ -613,17 +635,22 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setActiveWorkout((prev) => {
         if (!prev) return prev;
-        const exercises = [...prev.exercises];
-        const targetEx = exercises[exerciseIndex];
+        const targetEx = prev.exercises[exerciseIndex];
         if (!targetEx || !targetEx.sets[setIndex]) return prev;
 
         const currentSet = targetEx.sets[setIndex];
         const willBeCompleted = !currentSet.completed;
 
-        targetEx.sets[setIndex] = {
-          ...currentSet,
-          completed: willBeCompleted
-        };
+        const exercises = prev.exercises.map((ex, idx) =>
+          idx === exerciseIndex
+            ? {
+                ...ex,
+                sets: ex.sets.map((set, sIdx) =>
+                  sIdx === setIndex ? { ...set, completed: willBeCompleted } : set
+                )
+              }
+            : ex
+        );
 
         const synced = syncWorkoutMetrics(exercises);
 
@@ -660,9 +687,12 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const finishWorkout = useCallback(() => {
     if (!activeWorkout) return;
 
+    const finishedAt = Date.now();
     const finishedSession: WorkoutSession = {
       ...activeWorkout,
-      finishedAt: Date.now(),
+      finishedAt,
+      // duration is derived from the clock, so it must be resolved before archiving
+      durationSeconds: Math.max(0, Math.floor((finishedAt - activeWorkout.startedAt) / 1000)),
       status: 'completed'
     };
 
@@ -680,6 +710,18 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipRestTimer();
     setActiveTab('home');
   }, [skipRestTimer]);
+
+  const openSummaryModal = useCallback((workout?: WorkoutSession) => {
+    if (workout) {
+      setLastCompletedWorkout(workout);
+    } else if (!lastCompletedWorkout) {
+      const fallback = workoutHistory.find((w) => w.status === 'completed') || workoutHistory[0] || null;
+      if (fallback) {
+        setLastCompletedWorkout(fallback);
+      }
+    }
+    setShowSummaryModal(true);
+  }, [lastCompletedWorkout, workoutHistory]);
 
   const closeSummaryModal = useCallback(() => {
     setShowSummaryModal(false);
@@ -726,6 +768,21 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateSettings = useCallback((updates: Partial<UserSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  const language = settings.language || 'id';
+
+  const setLanguage = useCallback((lang: Language) => {
+    updateSettings({ language: lang });
+  }, [updateSettings]);
+
+  const t = useCallback(
+    (key: TranslationKey): string => {
+      const activeLang = settings.language || 'id';
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+      return (dict as Record<string, string>)[key] || TRANSLATIONS.en[key] || key;
+    },
+    [settings.language]
+  );
 
   // Calculate Muscle Fatigue Map according to ABOT's exact scientific decay model
   const getMuscleFatigueMap = useCallback((): Record<MuscleGroup, MuscleFatigueInfo> => {
@@ -898,6 +955,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         showSummaryModal,
         lastCompletedWorkout,
         setActiveTab,
+        openSummaryModal,
         closeSummaryModal,
         startWorkout,
         finishWorkout,
@@ -908,6 +966,8 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         removeSet,
         updateSet,
         toggleSetCompleted,
+        updateWorkoutTitle,
+        updateExerciseNotes,
         startRestTimer,
         adjustRestTimer,
         skipRestTimer,
@@ -915,6 +975,9 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteRoutine,
         addCustomExercise,
         updateSettings,
+        language,
+        setLanguage,
+        t,
         getBest1RM,
         getMuscleFatigueMap,
         exportData,

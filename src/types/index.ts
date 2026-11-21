@@ -39,6 +39,10 @@ export interface Exercise {
   equipment: EquipmentType;
   instructions: string[];
   defaultRestSeconds: number;
+  videoEmbedId?: string;
+  videoUrl?: string;
+  tempo?: string;
+  tips?: string[];
 }
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
@@ -91,13 +95,29 @@ export interface Routine {
   exercises: RoutineItem[];
 }
 
+export interface UserProfile {
+  name?: string;
+  heightCm: number;
+  weightKg: number;
+  age: number;
+  gender: 'male' | 'female' | 'other';
+  bmi: number;
+  bmiCategory: 'underweight' | 'normal' | 'overweight' | 'obese';
+  goal: 'cut' | 'maintain' | 'bulk';
+  dailyCalories?: number;
+  dailyProteinGrams?: number;
+}
+
 export interface UserSettings {
   weightUnit: 'kg' | 'lbs';
   defaultRestSeconds: number;
   soundEnabled: boolean;
   hapticEnabled: boolean;
   hasSeenOnboarding: boolean;
-  theme: 'dark' | 'oled';
+  theme: 'dark' | 'light' | 'oled';
+  language: 'id' | 'en';
+  gymLocation?: string;
+  profile?: UserProfile;
 }
 
 export type MuscleFatigueStage = 'fresh' | 'recovering' | 'high' | 'exhausted';

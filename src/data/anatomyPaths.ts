@@ -29,6 +29,10 @@ export const ANATOMY_SLUG_MAP: Record<string, string[]> = {
   lower_back: ["lower-back"],
   adductors: ["adductors"],
   neck: ["neck"],
+  arms: ["biceps", "triceps", "forearm"],
+  legs: ["quadriceps", "hamstring", "gluteal", "calves", "tibialis", "adductors"],
+  core: ["abs", "obliques"],
+  full_body: ["chest", "upper-back", "deltoids", "biceps", "triceps", "quadriceps", "hamstring", "abs"],
   cardio: []
 };
 

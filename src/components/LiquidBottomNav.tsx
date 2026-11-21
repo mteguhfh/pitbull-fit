@@ -1,106 +1,191 @@
 import React from 'react';
+import { Card } from './Card';
 import { useWorkout } from '../context/WorkoutContext';
-import { Home, Dumbbell, BookOpen, Calendar, Settings, Play } from 'lucide-react';
+import { Home, ClipboardList, Dumbbell, Search, Hexagon, Timer } from 'lucide-react';
 
 export const LiquidBottomNav: React.FC = () => {
-  const { activeTab, setActiveTab, activeWorkout, startWorkout } = useWorkout();
+  const { activeTab, setActiveTab, activeWorkout, startWorkout, t } = useWorkout();
+
+  const handleFabClick = () => {
+    if (activeWorkout) {
+      setActiveTab('workout');
+    } else {
+      startWorkout(undefined, 'Quick Strength Session');
+    }
+  };
+
+  const isHome = activeTab === 'home';
+  const isWorkout = activeTab === 'workout';
+  const isExercises = activeTab === 'exercises';
+  const isProfile = activeTab === 'profile' || activeTab === 'history';
+
+  const totalSets = activeWorkout
+    ? activeWorkout.exercises.reduce((acc, e) => acc + e.sets.length, 0)
+    : 0;
+  const completedSets = activeWorkout
+    ? activeWorkout.exercises.reduce((acc, e) => acc + e.sets.filter((s) => s.completed).length, 0)
+    : 0;
+  const completionRatio = totalSets > 0 ? completedSets / totalSets : 0;
+  const circumference = 2 * Math.PI * 20; // ~125.66
+  const strokeDashoffset = circumference * (1 - Math.max(0.12, completionRatio));
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 mx-auto max-w-[500px] px-4 pb-4 pointer-events-auto">
+    <nav className="fixed bottom-0 inset-x-0 z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] mx-auto max-w-[480px] px-3 pointer-events-auto select-none">
       <div className="relative">
-        {/* Floating Center Elevated FAB */}
-        <div className="absolute left-1/2 -top-5 -translate-x-1/2 z-40">
+        {/* Floating Center Elevated Action FAB matching Abot screenshots */}
+        <div className="absolute left-1/2 -translate-x-1/2 -top-5 z-30 pointer-events-none">
           <button
             type="button"
-            onClick={() => {
-              if (activeWorkout) {
-                setActiveTab('workout');
-              } else {
-                startWorkout(undefined, 'Quick Workout');
-              }
-            }}
-            className="group relative flex size-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-[0_0_24px_rgba(204,255,0,0.5)] transition-all duration-300 hover:scale-105 active:scale-95"
-            title={activeWorkout ? 'Resume Active Workout' : 'Start Workout'}
+            onClick={handleFabClick}
+            className={`pointer-events-auto relative size-14 rounded-full flex items-center justify-center transition duration-200 active:scale-90 ${
+              activeWorkout
+                ? 'bg-[#13131c] border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.85)]'
+                : 'bg-accent text-on-accent border border-on-accent/20 hover:scale-105'
+            }`}
+            title={activeWorkout ? t('nav_active_workout') : t('nav_start_workout')}
           >
             {activeWorkout ? (
-              <span className="relative flex items-center justify-center">
-                <Dumbbell size={26} className="animate-bounce" />
-                <span className="absolute -top-1 -right-1 size-3 rounded-full bg-red-500 ring-2 ring-bg animate-ping" />
-              </span>
+              <>
+                {/* Segmented/dashed circular progress ring matching 5.webp */}
+                <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none p-0.5" viewBox="0 0 48 48">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeDasharray="4 3"
+                    className="text-white/20"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeDasharray={`${circumference}`}
+                    strokeDashoffset={`${strokeDashoffset}`}
+                    strokeLinecap="round"
+                    className="text-accent transition duration-300"
+                  />
+                </svg>
+                <Timer size={22} className="text-accent stroke-[2.5]" />
+              </>
             ) : (
-              <Play size={24} className="fill-current ml-0.5" />
+              <Dumbbell size={22} className="stroke-[2.5] -rotate-45" />
             )}
           </button>
         </div>
 
-        {/* Liquid Glass Dock Bar */}
-        <div
-          className="relative flex items-center justify-between rounded-2xl p-1.5 backdrop-blur-xl border border-line"
-          style={{
-            background: 'color-mix(in oklab, #09090b 80%, transparent)',
-            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 16px 40px rgba(0, 0, 0, 0.7)'
-          }}
+        {/* Real Refracting Liquid Glass Dock Container */}
+        <Card
+          radius="sheet"
+          padding="4px 6px"
+          variant="raised"
+          className="relative grid grid-cols-[1fr_1fr_56px_1fr_1fr] items-center min-h-[var(--bottom-nav-height)]"
         >
-          {/* Home */}
+          {/* TAB 1: HOME */}
           <button
             type="button"
             onClick={() => setActiveTab('home')}
-            className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 ${
-              activeTab === 'home' ? 'text-accent font-bold' : 'text-text-muted hover:text-text'
+            className={`relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl transition duration-200 active:scale-95 ${
+              isHome
+                ? 'bg-accent/12 border border-accent/30 shadow-sm'
+                : 'border border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <Home size={20} className={activeTab === 'home' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-            <span className="text-[10px] mt-1">Home</span>
+            <Home
+              size={19}
+              className={isHome ? 'stroke-[2.5] text-accent' : 'stroke-[1.8] text-text-muted'}
+            />
+            <span
+              className={`text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] transition-colors ${
+                isHome ? 'text-accent font-bold' : 'text-text-muted font-medium'
+              }`}
+            >
+              {t('nav_home')}
+            </span>
           </button>
 
-          {/* Workout / Routines */}
+          {/* TAB 2: WORKOUT (ClipboardList Icon matching Abot) */}
           <button
             type="button"
             onClick={() => setActiveTab('workout')}
-            className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 mr-8 ${
-              activeTab === 'workout' ? 'text-accent font-bold' : 'text-text-muted hover:text-text'
+            className={`relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl transition duration-200 active:scale-95 ${
+              isWorkout
+                ? 'bg-accent/12 border border-accent/30 shadow-sm'
+                : 'border border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <Dumbbell size={20} className={activeTab === 'workout' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-            <span className="text-[10px] mt-1">Workout</span>
+            <div className="relative">
+              {activeWorkout && (
+                <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-accent ring-2 ring-surface z-10" />
+              )}
+              <ClipboardList
+                size={19}
+                className={isWorkout ? 'stroke-[2.5] text-accent' : 'stroke-[1.8] text-text-muted'}
+              />
+            </div>
+            <span
+              className={`text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] transition-colors ${
+                isWorkout ? 'text-accent font-bold' : 'text-text-muted font-medium'
+              }`}
+            >
+              {t('nav_workout')}
+            </span>
           </button>
 
-          {/* Exercises */}
+          {/* CENTER DEDICATED SPACER (Symmetrical column for the elevated center FAB) */}
+          <div className="w-14 h-11 pointer-events-none" aria-hidden="true" />
+
+          {/* TAB 3: EXERCISES (Search Icon matching Abot) */}
           <button
             type="button"
             onClick={() => setActiveTab('exercises')}
-            className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 ml-8 ${
-              activeTab === 'exercises' ? 'text-accent font-bold' : 'text-text-muted hover:text-text'
+            className={`relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl transition duration-200 active:scale-95 ${
+              isExercises
+                ? 'bg-accent/12 border border-accent/30 shadow-sm'
+                : 'border border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <BookOpen size={20} className={activeTab === 'exercises' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-            <span className="text-[10px] mt-1">Exercises</span>
+            <Search
+              size={19}
+              className={isExercises ? 'stroke-[2.5] text-accent' : 'stroke-[1.8] text-text-muted'}
+            />
+            <span
+              className={`text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] transition-colors ${
+                isExercises ? 'text-accent font-bold' : 'text-text-muted font-medium'
+              }`}
+            >
+              {t('nav_exercises')}
+            </span>
           </button>
 
-          {/* History */}
+          {/* TAB 4: PROFILE (Hexagon Icon matching Abot 4.webp) */}
           <button
             type="button"
-            onClick={() => setActiveTab('history')}
-            className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 ${
-              activeTab === 'history' ? 'text-accent font-bold' : 'text-text-muted hover:text-text'
+            onClick={() => setActiveTab('profile')}
+            className={`relative flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl transition duration-200 active:scale-95 ${
+              isProfile
+                ? 'bg-accent/12 border border-accent/30 shadow-sm'
+                : 'border border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <Calendar size={20} className={activeTab === 'history' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-            <span className="text-[10px] mt-1">History</span>
+            <Hexagon
+              size={19}
+              className={isProfile ? 'stroke-[2.5] text-accent fill-accent/15' : 'stroke-[1.8] text-text-muted'}
+            />
+            <span
+              className={`text-[10px] mt-0.5 tracking-tight truncate max-w-[56px] transition-colors ${
+                isProfile ? 'text-accent font-bold' : 'text-text-muted font-medium'
+              }`}
+            >
+              {t('nav_profile')}
+            </span>
           </button>
-
-          {/* Settings */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-200 ${
-              activeTab === 'settings' ? 'text-accent font-bold' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            <Settings size={20} className={activeTab === 'settings' ? 'stroke-[2.5]' : 'stroke-[1.8]'} />
-            <span className="text-[10px] mt-1">Settings</span>
-          </button>
-        </div>
+        </Card>
       </div>
     </nav>
   );

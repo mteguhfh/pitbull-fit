@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useWorkout } from '../context/WorkoutContext';
 import {
   Play,
@@ -18,6 +19,15 @@ import {
 import { INITIAL_EXERCISES } from '../data/exercises';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { Exercise } from '../types';
+import { formatNumber, formatWeight } from '../utils/format';
+import { useDomTicker } from '../hooks/useDomTicker';
+
+/** Elapsed clock, painted outside React so the set grid never re-renders on a tick. */
+const WorkoutTimer: React.FC<{ startedAt: number }> = ({ startedAt }) => {
+  const readElapsed = useCallback(() => (Date.now() - startedAt) / 1000, [startedAt]);
+  const ref = useDomTicker(readElapsed);
+  return <span ref={ref} className="tabular-nums">00:00</span>;
+};
 
 export const WorkoutView: React.FC = () => {
   const {
@@ -31,9 +41,14 @@ export const WorkoutView: React.FC = () => {
     removeSet,
     updateSet,
     toggleSetCompleted,
+    updateWorkoutTitle,
+    updateExerciseNotes,
+    updateSettings,
     routines,
     settings,
-    exercises
+    exercises,
+    language,
+    t
   } = useWorkout();
 
   // Add exercise modal state
@@ -43,6 +58,7 @@ export const WorkoutView: React.FC = () => {
 
   // Exercise detail modal state
   const [selectedExDetail, setSelectedExDetail] = useState<Exercise | null>(null);
+  const [detailRoutine, setDetailRoutine] = useState<string | null>(null);
 
   // Filter exercises for the picker
   const filteredExercises = exercises.filter((ex) => {
@@ -71,7 +87,7 @@ export const WorkoutView: React.FC = () => {
           <button
             type="button"
             onClick={() => startWorkout(undefined, 'Quick Workout')}
-            className="size-12 rounded-2xl bg-accent text-on-accent flex items-center justify-center shadow-[0_0_20px_rgba(204,255,0,0.35)] hover:brightness-110 active:scale-95 transition-all"
+            className="size-12 rounded-2xl bg-accent text-on-accent flex items-center justify-center hover:brightness-110 active:scale-95 transition"
             title="Start Empty Workout"
           >
             <Play size={20} className="fill-current ml-0.5" />
@@ -87,7 +103,7 @@ export const WorkoutView: React.FC = () => {
             {routines.map((routine) => (
               <div
                 key={routine.id}
-                className="p-5 rounded-3xl bg-surface border border-line hover:border-line-strong transition-all shadow-lg"
+                className="p-5 rounded-card bg-surface border border-line hover:border-line-strong transition shadow-card"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
@@ -99,46 +115,105 @@ export const WorkoutView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => startWorkout(routine.id)}
-                    className="px-3.5 py-1.5 rounded-xl bg-accent text-on-accent text-xs font-black flex items-center gap-1.5 shadow-[0_0_12px_rgba(204,255,0,0.25)] hover:brightness-110 active:scale-95 transition-all"
+                    className="px-3.5 py-1.5 rounded-ctl bg-accent text-on-accent text-xs font-black flex items-center gap-1.5 hover:brightness-110 active:scale-95 transition"
                   >
                     <Play size={12} className="fill-current" />
-                    Start
+                    {t('start_workout')}
                   </button>
                 </div>
                 <p className="text-xs text-text-muted mb-3">{routine.description}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {routine.exercises.map((item) => {
-                    const ex = INITIAL_EXERCISES.find((e) => e.id === item.exerciseId);
-                    return (
-                      <span
-                        key={item.exerciseId}
-                        className="px-2 py-0.5 rounded-md bg-surface-2 text-[10px] font-semibold text-text-muted border border-line"
-                      >
-                        {ex ? ex.name : item.exerciseId}
-                      </span>
-                    );
-                  })}
+                  {routine.exercises.map((item) => (
+                    <span
+                      key={item.exerciseId}
+                      className="px-2 py-0.5 rounded-md bg-surface-2 text-[10px] font-semibold text-text-muted border border-line"
+                    >
+                      {INITIAL_EXERCISES.find((e) => e.id === item.exerciseId)?.name || item.exerciseId}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* ROUTINE DETAIL SHEET */}
+        {detailRoutine &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/85 animate-in fade-in"
+              onClick={() => setDetailRoutine(null)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg max-h-[80vh] bg-surface rounded-t-sheet sm:rounded-sheet border border-line-strong p-5 flex flex-col shadow-card"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-text">{detailRoutine}</h2>
+                    <span className="text-xs text-text-muted capitalize">
+                      {(routines.find((r) => r.name === detailRoutine)?.split || 'custom').replace('_', ' ')} ·{' '}
+                      {routines.find((r) => r.name === detailRoutine)?.exercises.length ?? 0} {t('nav_exercises')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDetailRoutine(null)}
+                    className="size-8 rounded-full bg-surface-2 border border-line text-text-muted hover:text-text flex items-center justify-center"
+                    aria-label={t('close_video_modal')}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-1.5">
+                  {(routines.find((r) => r.name === detailRoutine)?.exercises || []).map((item, i) => (
+                    <div
+                      key={`${item.exerciseId}-${i}`}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-ctl bg-surface-2/60 border border-line"
+                    >
+                      <span className="text-sm font-bold text-text truncate">
+                        {exercises.find((e) => e.id === item.exerciseId)?.name || item.exerciseId}
+                      </span>
+                      <span className="text-xs font-mono text-text-muted shrink-0">
+                        {item.defaultSets} × {item.targetReps}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    startWorkout(routines.find((r) => r.name === detailRoutine)?.id, detailRoutine);
+                    setDetailRoutine(null);
+                  }}
+                  className="mt-4 w-full py-3 rounded-ctl bg-accent text-on-accent font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition"
+                >
+                  <Play size={14} className="fill-current" />
+                  {t('start_workout')}
+                </button>
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
     );
   }
 
-  // ACTIVE WORKOUT VIEW
-  const durationMin = Math.floor(activeWorkout.durationSeconds / 60);
-  const durationSec = activeWorkout.durationSeconds % 60;
-  const timeFormatted = `${durationMin.toString().padStart(2, '0')}:${durationSec.toString().padStart(2, '0')}`;
+  /* =========================================================================
+   * VIEW B: ACTIVE WORKOUT STATE
+   * ========================================================================= */
+  const startedAt = activeWorkout.startedAt;
 
   return (
     <div className="pb-36 pt-4 px-4 max-w-[500px] mx-auto space-y-4">
       {/* Active Workout Header Bar */}
-      <div className="p-4 rounded-3xl bg-surface border border-accent/25 shadow-xl flex items-center justify-between sticky top-2 z-20 backdrop-blur-xl">
+      <div className="p-4 rounded-3xl bg-surface border border-accent/25 shadow-xl flex items-center justify-between sticky top-2 z-20">
         <div className="min-w-0">
-          <span className="block text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1">
-            <span className="size-2 rounded-full bg-accent animate-ping" /> Live Workout
+          <span className="block text-[11px] font-bold text-accent uppercase tracking-wider">
+            {t('nav_active_workout')}
           </span>
           <h1 className="text-base font-black text-text truncate">{activeWorkout.title}</h1>
         </div>
@@ -147,16 +222,16 @@ export const WorkoutView: React.FC = () => {
           {/* Timer Display */}
           <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-surface-2 border border-line text-accent font-mono text-xs font-black">
             <Clock size={14} />
-            {timeFormatted}
+            <WorkoutTimer startedAt={startedAt} />
           </div>
 
           {/* Finish Button */}
           <button
             type="button"
             onClick={finishWorkout}
-            className="px-3.5 py-1.5 rounded-xl bg-accent text-on-accent text-xs font-black shadow-[0_0_16px_rgba(204,255,0,0.35)] hover:brightness-110 active:scale-95 transition-all"
+            className="px-3.5 py-1.5 rounded-ctl bg-accent text-on-accent text-xs font-black hover:brightness-110 active:scale-95 transition"
           >
-            Finish
+            {t('finish_workout')}
           </button>
         </div>
       </div>
@@ -166,8 +241,8 @@ export const WorkoutView: React.FC = () => {
         <div className="flex items-center gap-2 p-2.5 rounded-xl bg-surface border border-line">
           <Dumbbell size={16} className="text-accent" />
           <span className="text-text-muted">Volume:</span>
-          <span className="font-mono font-bold text-text ml-auto">
-            {Math.round(activeWorkout.totalVolume)} {settings.weightUnit}
+          <span className="font-mono font-bold text-text ml-auto tabular-nums">
+            {formatNumber(activeWorkout.totalVolume, language)} {settings.weightUnit}
           </span>
         </div>
         <div className="flex items-center gap-2 p-2.5 rounded-xl bg-surface border border-line">
@@ -224,11 +299,11 @@ export const WorkoutView: React.FC = () => {
               </div>
 
               {/* Sets Table Header */}
-              <div className="grid grid-cols-[36px_1fr_64px_52px_42px] gap-1.5 px-1 text-[11px] font-semibold text-text-muted text-center">
+              <div className="grid grid-cols-[32px_1fr_60px_50px_40px] gap-1.5 px-1 text-[10px] font-bold text-text-muted uppercase tracking-wider text-center">
                 <span>Set</span>
-                <span className="text-left">Last time</span>
+                <span className="text-left">{t('prev_col')}</span>
                 <span>{settings.weightUnit}</span>
-                <span>Reps</span>
+                <span>{t('reps_col')}</span>
                 <span></span>
               </div>
 
@@ -238,7 +313,7 @@ export const WorkoutView: React.FC = () => {
                   return (
                     <div
                       key={set.id}
-                      className={`grid grid-cols-[36px_1fr_64px_52px_42px] items-center gap-1.5 p-1 rounded-xl border transition-all duration-200 ${
+                      className={`grid grid-cols-[32px_1fr_60px_50px_40px] items-center gap-1.5 p-1 rounded-ctl border transition-colors duration-200 ${
                         set.completed
                           ? 'border-accent/30 bg-accent/[0.08]'
                           : 'border-line/70 bg-surface-2/40'
@@ -256,7 +331,7 @@ export const WorkoutView: React.FC = () => {
                               : 'normal';
                           updateSet(exIdx, sIdx, { type: nextType });
                         }}
-                        className={`size-8 rounded-lg flex items-center justify-center text-xs font-black transition-colors ${
+                        className={`size-7 rounded-lg flex items-center justify-center text-xs font-mono font-bold transition-colors ${
                           set.type === 'warmup'
                             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                             : set.type === 'drop'
@@ -278,10 +353,10 @@ export const WorkoutView: React.FC = () => {
                           </span>
                         ) : set.previousWeight && set.previousReps ? (
                           <span className="text-[11px] font-mono text-text-muted truncate block">
-                            {set.previousWeight} × {set.previousReps}
+                            {formatWeight(set.previousWeight, language)} × {set.previousReps}
                           </span>
                         ) : (
-                          <span className="text-[11px] text-zinc-600">—</span>
+                          <span className="text-[11px] text-text-muted/60">—</span>
                         )}
                       </div>
 
@@ -289,6 +364,7 @@ export const WorkoutView: React.FC = () => {
                       <div className="relative flex items-center justify-center">
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="0.5"
                           min="0"
                           value={set.weight === 0 ? '0' : (set.weight || '')}
@@ -296,7 +372,7 @@ export const WorkoutView: React.FC = () => {
                             const val = e.target.value;
                             updateSet(exIdx, sIdx, { weight: val === '' ? 0 : parseFloat(val) || 0 });
                           }}
-                          className="h-10 w-full rounded-lg bg-bg border border-line text-center text-sm font-bold font-mono text-text focus:outline-none focus:border-accent"
+                          className="h-9 w-full rounded-ctl bg-bg border border-line text-center text-sm font-bold font-mono text-text tabular-nums focus:outline-none focus:border-accent"
                           placeholder="0"
                         />
                       </div>
@@ -305,6 +381,7 @@ export const WorkoutView: React.FC = () => {
                       <div className="relative flex items-center justify-center">
                         <input
                           type="number"
+                          inputMode="numeric"
                           step="1"
                           min="0"
                           value={set.reps === 0 ? '0' : (set.reps || '')}
@@ -312,7 +389,7 @@ export const WorkoutView: React.FC = () => {
                             const val = e.target.value;
                             updateSet(exIdx, sIdx, { reps: val === '' ? 0 : parseInt(val, 10) || 0 });
                           }}
-                          className="h-10 w-full rounded-lg bg-bg border border-line text-center text-sm font-bold font-mono text-text focus:outline-none focus:border-accent"
+                          className="h-9 w-full rounded-ctl bg-bg border border-line text-center text-sm font-bold font-mono text-text tabular-nums focus:outline-none focus:border-accent"
                           placeholder="0"
                         />
                       </div>
@@ -321,9 +398,9 @@ export const WorkoutView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => toggleSetCompleted(exIdx, sIdx)}
-                        className={`size-10 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                        className={`size-8 rounded-ctl flex items-center justify-center transition-colors duration-200 active:scale-90 ${
                           set.completed
-                            ? 'bg-accent text-on-accent shadow-[0_0_12px_rgba(204,255,0,0.45)]'
+                            ? 'bg-accent text-on-accent'
                             : 'bg-surface-2 text-text-muted hover:text-text border border-line'
                         }`}
                         title="Mark set complete"
@@ -342,7 +419,7 @@ export const WorkoutView: React.FC = () => {
                   onClick={() => addSet(exIdx)}
                   className="px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 border border-line text-xs font-bold text-text-muted hover:text-text flex items-center gap-1.5 transition-colors"
                 >
-                  <Plus size={14} /> Add Set
+                  <Plus size={14} /> {t('add_set')}
                 </button>
 
                 {exItem.sets.length > 1 && (
@@ -351,7 +428,7 @@ export const WorkoutView: React.FC = () => {
                     onClick={() => removeSet(exIdx, exItem.sets.length - 1)}
                     className="text-xs text-text-muted hover:text-red-400 transition-colors"
                   >
-                    Delete Set
+                    {t('delete_set')}
                   </button>
                 )}
               </div>
@@ -364,7 +441,7 @@ export const WorkoutView: React.FC = () => {
       <button
         type="button"
         onClick={() => setShowAddExModal(true)}
-        className="w-full py-4 rounded-2xl border-2 border-dashed border-line hover:border-accent/40 bg-surface/40 hover:bg-surface text-text-muted hover:text-accent font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+        className="w-full py-4 rounded-2xl border-2 border-dashed border-line hover:border-accent/40 bg-surface/40 hover:bg-surface text-text-muted hover:text-accent font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.99]"
       >
         <PlusCircle size={20} />
         Add Exercise
@@ -375,22 +452,22 @@ export const WorkoutView: React.FC = () => {
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('Are you sure you want to discard this workout?')) {
+            if (window.confirm(t('discard_confirm'))) {
               cancelWorkout();
             }
           }}
-          className="text-xs font-semibold text-text-muted hover:text-red-400 transition-colors"
+          className="text-xs font-semibold text-text-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
         >
-          Discard Workout
+          {t('discard_workout')}
         </button>
       </div>
 
       {/* ADD EXERCISE DRAWER / MODAL */}
       {showAddExModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg max-h-[85vh] bg-surface rounded-t-3xl sm:rounded-3xl border border-line p-5 flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 animate-in fade-in">
+          <div className="w-full max-w-lg max-h-[85vh] bg-surface rounded-t-sheet sm:rounded-sheet border border-line p-5 flex flex-col shadow-card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-text">Add Exercise</h2>
+              <h2 className="text-lg font-black text-text">{t('add_exercise')}</h2>
               <button
                 type="button"
                 onClick={() => setShowAddExModal(false)}

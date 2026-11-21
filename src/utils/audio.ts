@@ -1,4 +1,5 @@
-// Web Audio API Synthesizer for workout beeps, bells, and PR celebrations
+// Audio Synthesizer & Hardware Mobile Haptic Engine
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 class AudioManager {
   private ctx: AudioContext | null = null;
@@ -44,6 +45,7 @@ class AudioManager {
 
   // Set completed chime
   playSetComplete() {
+    this.triggerHaptic(ImpactStyle.Light);
     try {
       this.initCtx();
       if (!this.ctx) return;
@@ -64,6 +66,7 @@ class AudioManager {
 
   // Personal Record (PR) celebratory fanfare
   playPRCelebration() {
+    this.triggerHapticNotification(NotificationType.Success);
     try {
       this.initCtx();
       if (!this.ctx) return;
@@ -88,11 +91,11 @@ class AudioManager {
 
   // Rest timer finished alert bell
   playTimerComplete() {
+    this.triggerHapticNotification(NotificationType.Warning);
     try {
       this.initCtx();
       if (!this.ctx) return;
       const now = this.ctx.currentTime;
-      // High bell tone
       [880, 1174.66, 1760].forEach((freq) => {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
@@ -109,11 +112,30 @@ class AudioManager {
     } catch {}
   }
 
-  // Vibrate phone if supported
-  triggerHaptic(pattern: number | number[] = 30) {
+  // Native Mobile Haptic Impact (iOS Taptic & Android Motor) with web fallback
+  triggerHaptic(param: ImpactStyle | number | number[] = ImpactStyle.Medium) {
+    let style: ImpactStyle = ImpactStyle.Medium;
+    if (typeof param === 'string') {
+      style = param;
+    }
+    try {
+      Haptics.impact({ style }).catch(() => {});
+    } catch {}
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate(pattern);
+        navigator.vibrate(typeof param === 'number' || Array.isArray(param) ? param : 35);
+      } catch {}
+    }
+  }
+
+  // Native Mobile Haptic Notification (Success / Warning / Error)
+  triggerHapticNotification(type: NotificationType = NotificationType.Success) {
+    try {
+      Haptics.notification({ type }).catch(() => {});
+    } catch {}
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([40, 60, 40]);
       } catch {}
     }
   }

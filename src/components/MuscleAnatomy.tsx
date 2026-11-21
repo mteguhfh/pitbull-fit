@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FRONT_PARTS,
   BACK_PARTS,
@@ -14,13 +14,14 @@ import { MuscleGroup, MuscleFatigueInfo } from '../types';
 interface MuscleAnatomyProps {
   primaryMuscles?: MuscleGroup[];
   secondaryMuscles?: MuscleGroup[];
-  fatigueMap?: Record<MuscleGroup, MuscleFatigueInfo>;
+  fatigueMap?: Partial<Record<MuscleGroup, MuscleFatigueInfo>>;
   onSelectMuscle?: (muscle: MuscleGroup) => void;
   selectedMuscle?: MuscleGroup | null;
   width?: number | string;
   showToggle?: boolean;
   showDetailCard?: boolean;
   compact?: boolean;
+  activeView?: 'both' | 'front' | 'back';
 }
 
 export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
@@ -32,12 +33,18 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
   width = '100%',
   showToggle = true,
   showDetailCard = true,
-  compact = false
+  compact = false,
+  activeView = 'both'
 }) => {
-  const [view, setView] = useState<'both' | 'front' | 'back'>('both');
+  const [view, setView] = useState<'both' | 'front' | 'back'>(activeView);
   const [internalSelected, setInternalSelected] = useState<MuscleGroup | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
+  useEffect(() => {
+    setView(activeView);
+  }, [activeView]);
+
+  const effectiveView = showToggle ? view : activeView;
   const activeSelected = externalSelected !== undefined ? externalSelected : internalSelected;
 
   // Find which MuscleGroup a slug maps to
@@ -82,11 +89,12 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
 
     if (isPrimary) {
       return {
-        fill: '#ccff00',
+        fill: '#c5222f',
         opacity: 1,
-        stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#09090b',
-        strokeWidth: isSelected ? 4 : isHovered ? 2.5 : 1.2,
-        isInteractive: true
+        stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#e11d48',
+        strokeWidth: isSelected ? 4 : isHovered ? 2.5 : (compact ? 2 : 1.2),
+        isInteractive: true,
+        isPrimary: true
       };
     }
 
@@ -98,11 +106,12 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
 
     if (isSecondary) {
       return {
-        fill: '#ccff00',
-        opacity: 0.45,
-        stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#09090b',
+        fill: 'var(--color-accent)',
+        opacity: 0.5,
+        stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#08080a',
         strokeWidth: isSelected ? 4 : isHovered ? 2.5 : 1.2,
-        isInteractive: true
+        isInteractive: true,
+        isPrimary: false
       };
     }
 
@@ -131,7 +140,8 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
         opacity,
         stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#09090b',
         strokeWidth: isSelected ? 4 : isHovered ? 2.5 : 1.2,
-        isInteractive: true
+        isInteractive: true,
+        isPrimary: false
       };
     }
 
@@ -141,7 +151,8 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
       opacity: 0.7,
       stroke: isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#09090b',
       strokeWidth: isSelected ? 4 : isHovered ? 2.5 : 1.2,
-      isInteractive: true
+      isInteractive: true,
+      isPrimary: false
     };
   };
 
@@ -187,32 +198,22 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
       )}
 
       {/* SVG Canvas Area */}
-      <div className="relative w-full flex items-center justify-center gap-3 py-1">
+      <div className={`relative w-full flex items-center justify-center ${compact ? 'gap-1.5 py-0' : 'gap-3 py-1'}`}>
         {/* Front View */}
-        {(view === 'both' || view === 'front') && (
+        {(effectiveView === 'both' || effectiveView === 'front') && (
           <div className="flex flex-col items-center flex-1 max-w-[220px]">
             <svg
               viewBox={VIEWBOX_CONFIG.front}
-              className="w-full h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]"
+              className={`w-full h-auto ${compact ? '' : 'drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]'}`}
               style={{ overflow: 'visible' }}
             >
-              <defs>
-                <filter id="neon-glow-primary" x="-30%" y="-30%" width="160%" height="160%">
-                  <feGaussianBlur stdDeviation="7" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-
               {/* Front Silhouette Muscle Groups */}
               {FRONT_PARTS.map((part) => {
                 const style = getPartStyle(part.slug);
                 return (
                   <g
                     key={`front-${part.slug}`}
-                    className={style.isInteractive ? 'cursor-pointer transition-all duration-200' : ''}
+                    className={style.isInteractive ? 'cursor-pointer transition duration-200' : ''}
                     onMouseEnter={() => style.isInteractive && setHoveredSlug(part.slug)}
                     onMouseLeave={() => style.isInteractive && setHoveredSlug(null)}
                     onClick={() => style.isInteractive && handlePartClick(part.slug)}
@@ -236,8 +237,8 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
               <path
                 d={FRONT_OUTLINE}
                 fill="none"
-                stroke="rgba(255, 255, 255, 0.22)"
-                strokeWidth="2.5"
+                stroke="rgba(255, 255, 255, 0.28)"
+                strokeWidth={compact ? "4.5" : "2.5"}
                 pointerEvents="none"
               />
             </svg>
@@ -250,11 +251,11 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
         )}
 
         {/* Back View */}
-        {(view === 'both' || view === 'back') && (
+        {(effectiveView === 'both' || effectiveView === 'back') && (
           <div className="flex flex-col items-center flex-1 max-w-[220px]">
             <svg
               viewBox={VIEWBOX_CONFIG.back}
-              className="w-full h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]"
+              className={`w-full h-auto ${compact ? '' : 'drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]'}`}
               style={{ overflow: 'visible' }}
             >
               {/* Back Silhouette Muscle Groups */}
@@ -263,7 +264,7 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
                 return (
                   <g
                     key={`back-${part.slug}`}
-                    className={style.isInteractive ? 'cursor-pointer transition-all duration-200' : ''}
+                    className={style.isInteractive ? 'cursor-pointer transition duration-200' : ''}
                     onMouseEnter={() => style.isInteractive && setHoveredSlug(part.slug)}
                     onMouseLeave={() => style.isInteractive && setHoveredSlug(null)}
                     onClick={() => style.isInteractive && handlePartClick(part.slug)}
@@ -287,8 +288,8 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
               <path
                 d={BACK_OUTLINE}
                 fill="none"
-                stroke="rgba(255, 255, 255, 0.22)"
-                strokeWidth="2.5"
+                stroke="rgba(255, 255, 255, 0.28)"
+                strokeWidth={compact ? "4.5" : "2.5"}
                 pointerEvents="none"
               />
             </svg>
@@ -303,7 +304,7 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
 
       {/* ABOT-style Interactive Muscle Recovery Inspector Card */}
       {showDetailCard && fatigueMap && !compact && (
-        <div className="w-full mt-3 p-3 rounded-2xl bg-surface border border-line-strong transition-all">
+        <div className="w-full mt-3 p-3 rounded-2xl bg-surface border border-line-strong transition">
           {selectedInfo && selectedDisplayName ? (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
@@ -317,7 +318,7 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
                     selectedInfo.stage === 'exhausted'
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
                       : selectedInfo.stage === 'high'
                       ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
                       : selectedInfo.stage === 'recovering'
@@ -372,7 +373,7 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
       {primaryMuscles.length > 0 && !compact && (
         <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-accent inline-block shadow-[0_0_8px_#ccff00]" /> Primary Target
+            <span className="size-2.5 rounded-full bg-accent inline-block" /> Primary Target
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-accent/45 inline-block" /> Secondary Synergist
