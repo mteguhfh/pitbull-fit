@@ -9,3 +9,9 @@ src/compiled.css
 android
 ios
 .DS_Store
+
+# catatan lokal: jangan ikut ke repo publik
+*.md
+!README.md
+AGENTS.md
+CLAUDE.md
