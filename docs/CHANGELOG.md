@@ -10,7 +10,7 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 - Backup otomatis data latihan.
 
-## [1.0.1] - 2026-11-22
+## [1.0.2] - 2026-11-22
 
 ### Diperbaiki
 
@@ -27,6 +27,8 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ### Ditambahkan
 
+- Prompt install PWA, toast versi baru, dan workflow build APK Android
+  (APK dilampirkan di setiap release).
 - Storage schema versioning (`pitbull_storage_version`) dengan jalur migrasi.
 - ErrorBoundary dengan tombol muat ulang dan reset data lokal.
 - Toast "versi baru tersedia" saat service worker baru menunggu.
