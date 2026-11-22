@@ -4,6 +4,8 @@ import { LiquidBottomNav } from './components/LiquidBottomNav';
 import { RestTimerBar } from './components/RestTimerBar';
 import { ActiveSessionStrip } from './components/ActiveSessionStrip';
 import { HomeView } from './components/HomeView';
+import { UpdateToast } from './components/UpdateToast';
+import { InstallPrompt } from './components/InstallPrompt';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 
@@ -71,6 +73,12 @@ const MainApp: React.FC = () => {
 
       {/* Liquid Bottom Navigation */}
       <LiquidBottomNav />
+
+      {/* Prompts a reload when a new service worker is ready */}
+      <UpdateToast />
+
+      {/* Offers PWA install once the browser allows it */}
+      <InstallPrompt />
 
       {/* Workout Completion Summary Celebration Modal */}
       <Suspense fallback={null}>

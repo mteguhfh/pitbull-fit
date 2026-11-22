@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FRONT_PARTS,
   BACK_PARTS,
@@ -37,12 +37,15 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
   activeView = 'both'
 }) => {
   const [view, setView] = useState<'both' | 'front' | 'back'>(activeView);
+  const [syncedActiveView, setSyncedActiveView] = useState(activeView);
   const [internalSelected, setInternalSelected] = useState<MuscleGroup | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Follow the externally controlled view without an effect round-trip.
+  if (activeView !== syncedActiveView) {
+    setSyncedActiveView(activeView);
     setView(activeView);
-  }, [activeView]);
+  }
 
   const effectiveView = showToggle ? view : activeView;
   const activeSelected = externalSelected !== undefined ? externalSelected : internalSelected;
@@ -118,8 +121,8 @@ export const MuscleAnatomy: React.FC<MuscleAnatomyProps> = ({
     // 3. Dynamic Fatigue stages
     if (fatigueMap && group && fatigueMap[group]) {
       const info = fatigueMap[group];
-      let fill = '#27272a';
-      let opacity = 0.7;
+      let fill: string;
+      let opacity: number;
 
       if (info.stage === 'exhausted') {
         fill = '#ef4444';

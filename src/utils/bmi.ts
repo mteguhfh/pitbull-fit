@@ -37,7 +37,7 @@ export function calculateBMI(
   const rawBmi = weightKg / (heightM * heightM);
   const bmi = Math.round(rawBmi * 10) / 10;
 
-  let category: BMICategory = 'normal';
+  let category: BMICategory;
   if (bmi < 18.5) {
     category = 'underweight';
   } else if (bmi < 25) {

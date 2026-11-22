@@ -12,6 +12,12 @@ export default defineConfig({
   test: {
     // e2e/ belongs to Playwright, not vitest
     include: ['src/**/*.test.{ts,tsx}'],
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**']
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/utils/**', 'src/hooks/**', 'src/data/**'],
+      exclude: ['src/data/exercises.ts', 'src/data/anatomyPaths.ts']
+    }
   }
 });

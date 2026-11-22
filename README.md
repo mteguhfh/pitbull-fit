@@ -33,7 +33,9 @@ React 19 · TypeScript · Vite · Tailwind CSS · Capacitor · Vitest
 npm install
 npm run dev        # web dev server (port 3000)
 npm test           # unit test (vitest)
+npm run lint       # ESLint
 npm run typecheck  # cek tipe saja
+npm run test:coverage  # laporan coverage
 npm run build      # build production ke dist/
 npm run preview    # preview hasil build
 ```
@@ -62,6 +64,11 @@ src/
 public/         manifest PWA, icon, font
 docs/           screenshot
 ```
+
+## Kontribusi
+
+Lihat [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Riwayat perubahan ada di
+[docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## Lisensi
 

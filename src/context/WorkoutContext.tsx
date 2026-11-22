@@ -12,6 +12,7 @@ import {
 import { INITIAL_EXERCISES, INITIAL_ROUTINES } from '../data/exercises';
 import { soundFx } from '../utils/audio';
 import { TRANSLATIONS, TranslationKey, Language } from '../utils/i18n';
+import { STORAGE_KEYS, ensureStorageVersion, readJson, removeKey, writeJson } from '../utils/storage';
 
 interface RestTimerState {
   isActive: boolean;
@@ -94,14 +95,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   }
 };
 
-const STORAGE_KEYS = {
-  ACTIVE: 'pitbull_active_workout',
-  HISTORY: 'pitbull_workout_history',
-  EXERCISES: 'pitbull_custom_exercises',
-  ROUTINES: 'pitbull_routines',
-  SETTINGS: 'pitbull_settings'
-};
-
 // Calculate 1RM using standard Epley Formula: weight * (1 + reps / 30)
 export const calculate1RM = (weight: number, reps: number): number => {
   if (reps <= 0 || weight <= 0) return 0;
@@ -123,17 +116,27 @@ const BIG_MUSCLES = new Set<string>([
   'hamstrings'
 ]);
 
+// Storage shape guards: drop corrupt or foreign payloads instead of crashing the app.
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isExerciseShape = (value: unknown): value is Exercise =>
+  isPlainObject(value) && typeof value.id === 'string' && typeof value.name === 'string';
+
+const isRoutineShape = (value: unknown): value is Routine =>
+  isPlainObject(value) && typeof value.id === 'string' && Array.isArray(value.items);
+
+const isSessionShape = (value: unknown): value is WorkoutSession =>
+  isPlainObject(value) && typeof value.id === 'string' && Array.isArray(value.exercises);
+
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
 export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial settings
   const [settings, setSettings] = useState<UserSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
+    ensureStorageVersion();
+    const saved = readJson<Partial<UserSettings>>(STORAGE_KEYS.SETTINGS, {}, isPlainObject);
+    return { ...DEFAULT_SETTINGS, ...saved };
   });
 
   // Active Tab
@@ -141,41 +144,26 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Exercises
   const [exercises, setExercises] = useState<Exercise[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.EXERCISES);
-      if (saved) {
-        const custom = JSON.parse(saved);
-        return [...INITIAL_EXERCISES, ...custom];
-      }
-    } catch {}
-    return INITIAL_EXERCISES;
+    const custom = readJson<Exercise[]>(STORAGE_KEYS.EXERCISES, [], Array.isArray);
+    return [...INITIAL_EXERCISES, ...custom.filter(isExerciseShape)];
   });
 
   // Routines
   const [routines, setRoutines] = useState<Routine[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ROUTINES);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return INITIAL_ROUTINES;
+    const saved = readJson<Routine[]>(STORAGE_KEYS.ROUTINES, [], Array.isArray);
+    return saved.length > 0 ? saved.filter(isRoutineShape) : INITIAL_ROUTINES;
   });
 
   // Workout History
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutSession[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
+    const saved = readJson<WorkoutSession[]>(STORAGE_KEYS.HISTORY, [], Array.isArray);
+    return saved.filter(isSessionShape);
   });
 
   // Active Workout
   const [activeWorkout, setActiveWorkout] = useState<WorkoutSession | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return null;
+    const saved = readJson<WorkoutSession | null>(STORAGE_KEYS.ACTIVE, null, isSessionShape);
+    return saved && saved.status === 'active' ? saved : null;
   });
 
   // Summary Modal
@@ -192,7 +180,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Save Settings
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    writeJson(STORAGE_KEYS.SETTINGS, settings);
   }, [settings]);
 
   // Sync Theme (Dark vs Light) with DOM root and color-scheme
@@ -216,15 +204,15 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Save History
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(workoutHistory));
+    writeJson(STORAGE_KEYS.HISTORY, workoutHistory);
   }, [workoutHistory]);
 
   // Save Active Workout
   useEffect(() => {
     if (activeWorkout) {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(activeWorkout));
+      writeJson(STORAGE_KEYS.ACTIVE, activeWorkout);
     } else {
-      localStorage.removeItem(STORAGE_KEYS.ACTIVE);
+      removeKey(STORAGE_KEYS.ACTIVE);
     }
   }, [activeWorkout]);
 
@@ -377,7 +365,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const routine = routineId ? routines.find((r) => r.id === routineId) : null;
       const title = customTitle || (routine ? routine.name : 'Quick Workout');
 
-      let initialExercises: WorkoutExercise[] = [];
+      let initialExercises: WorkoutExercise[];
       if (routine) {
         initialExercises = routine.exercises.map((item, exIdx) => {
           const sets: WorkoutSet[] = [];
@@ -736,7 +724,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setRoutines((prev) => {
       const updated = [...prev, newRoutine];
-      localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(updated));
+      writeJson(STORAGE_KEYS.ROUTINES, updated);
       return updated;
     });
   }, []);
@@ -745,7 +733,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteRoutine = useCallback((id: string) => {
     setRoutines((prev) => {
       const updated = prev.filter((r) => r.id !== id);
-      localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(updated));
+      writeJson(STORAGE_KEYS.ROUTINES, updated);
       return updated;
     });
   }, []);
@@ -759,7 +747,7 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setExercises((prev) => {
       const updated = [...prev, newEx];
       const customOnly = updated.filter((e) => !INITIAL_EXERCISES.some((ie) => ie.id === e.id));
-      localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(customOnly));
+      writeJson(STORAGE_KEYS.EXERCISES, customOnly);
       return updated;
     });
   }, []);
@@ -932,11 +920,27 @@ export const WorkoutProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const importData = useCallback((jsonStr: string): boolean => {
     try {
-      const parsed = JSON.parse(jsonStr);
-      if (parsed.workoutHistory) setWorkoutHistory(parsed.workoutHistory);
-      if (parsed.routines) setRoutines(parsed.routines);
-      if (parsed.settings) setSettings(parsed.settings);
-      return true;
+      const parsed: unknown = JSON.parse(jsonStr);
+      if (!isPlainObject(parsed)) return false;
+
+      let imported = false;
+
+      if (Array.isArray(parsed.workoutHistory)) {
+        const history = parsed.workoutHistory.filter(isSessionShape);
+        setWorkoutHistory(history);
+        imported = true;
+      }
+      if (Array.isArray(parsed.routines)) {
+        const importedRoutines = parsed.routines.filter(isRoutineShape);
+        if (importedRoutines.length > 0) setRoutines(importedRoutines);
+        imported = true;
+      }
+      if (isPlainObject(parsed.settings)) {
+        setSettings({ ...DEFAULT_SETTINGS, ...(parsed.settings as Partial<UserSettings>) });
+        imported = true;
+      }
+
+      return imported;
     } catch {
       return false;
     }

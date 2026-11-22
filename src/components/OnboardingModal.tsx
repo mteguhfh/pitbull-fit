@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { PitbullLogo } from './PitbullLogo';
 import { calculateBMI, lbsToKg, kgToLbs, BMICategory, FitnessGoal, Gender } from '../utils/bmi';
+import { useNumericField } from '../hooks/useNumericField';
 
 interface OnboardingModalProps {
   onComplete: () => void;
@@ -43,30 +44,52 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
   const [unit, setUnit] = useState<'kg' | 'lbs'>(settings.weightUnit || 'kg');
   const [goal, setGoal] = useState<FitnessGoal>(settings.profile?.goal || 'maintain');
 
+  // Numeric drafts: keep what the user types, clamp only on blur/commit.
+  const ageField = useNumericField(age, { min: 12, max: 99, fallback: 25 });
+  const heightField = useNumericField(heightCm, { min: 100, max: 250, fallback: 175 });
+  const weightField = useNumericField(weight, { min: 30, max: 300, fallback: 70, decimal: true });
+
   // Interactive workout demo state
   const [demoSet2Done, setDemoSet2Done] = useState(false);
   const [demoRestSeconds, setDemoRestSeconds] = useState(85);
 
   // Calculate live BMI
   const weightInKg = unit === 'lbs' ? lbsToKg(weight) : weight;
-  const bmiResult = calculateBMI(weightInKg, heightCm, age, gender, goal);
+  const previewWeight = weightField.text.trim() === '' ? weightInKg : unit === 'lbs'
+    ? lbsToKg(parseFloat(weightField.text) || 70)
+    : parseFloat(weightField.text) || 70;
+  const previewHeight = parseFloat(heightField.text) || heightCm;
+  const previewAge = parseInt(ageField.text, 10) || age;
+  const bmiResult = calculateBMI(previewWeight, previewHeight, previewAge, gender, goal);
 
-  // Sync profile when BMI values change
+  // Commit any half-typed field first, then persist the profile.
   const saveProfileData = () => {
+    const finalAge = ageField.commit();
+    const finalHeight = heightField.commit();
+    const finalWeight = weightField.commit();
+    setAge(finalAge);
+    setHeightCm(finalHeight);
+    setWeight(finalWeight);
+
+    const finalWeightKg = unit === 'lbs' ? lbsToKg(finalWeight) : finalWeight;
+    const bmi = calculateBMI(finalWeightKg, finalHeight, finalAge, gender, goal);
+
     updateSettings({
       weightUnit: unit,
       profile: {
-        heightCm,
-        weightKg: weightInKg,
-        age,
+        heightCm: finalHeight,
+        weightKg: finalWeightKg,
+        age: finalAge,
         gender,
-        bmi: bmiResult.bmi,
-        bmiCategory: bmiResult.category,
+        bmi: bmi.bmi,
+        bmiCategory: bmi.category,
         goal,
-        dailyCalories: bmiResult.dailyCalories,
-        dailyProteinGrams: bmiResult.dailyProteinGrams
+        dailyCalories: bmi.dailyCalories,
+        dailyProteinGrams: bmi.dailyProteinGrams
       }
     });
+
+    return { finalAge, finalHeight, finalWeight };
   };
 
   const getBmiColor = (cat: BMICategory) => {
@@ -193,11 +216,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
               </span>
               <div className="flex items-center rounded-xl bg-surface-2 border border-line px-3 py-1">
                 <input
-                  type="number"
-                  min={12}
-                  max={99}
-                  value={age}
-                  onChange={(e) => setAge(Math.max(12, Math.min(99, Number(e.target.value))))}
+                  type="text"
+                  inputMode="numeric"
+                  value={ageField.text}
+                  onChange={(e) => ageField.onChange(e.target.value)}
+                  onBlur={() => setAge(ageField.commit())}
                   className="w-full bg-transparent text-sm font-black font-mono text-text outline-none"
                 />
                 <span className="text-xs text-text-muted">th</span>
@@ -213,11 +236,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
               </span>
               <div className="flex items-center rounded-xl bg-surface-2 border border-line px-3 py-1">
                 <input
-                  type="number"
-                  min={100}
-                  max={250}
-                  value={heightCm}
-                  onChange={(e) => setHeightCm(Math.max(100, Math.min(250, Number(e.target.value))))}
+                  type="text"
+                  inputMode="numeric"
+                  value={heightField.text}
+                  onChange={(e) => heightField.onChange(e.target.value)}
+                  onBlur={() => setHeightCm(heightField.commit())}
                   className="w-full bg-transparent text-sm font-black font-mono text-text outline-none"
                 />
                 <span className="text-xs text-text-muted">cm</span>
@@ -232,12 +255,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                 <button
                   type="button"
                   onClick={() => {
+                    const committed = weightField.commit();
+                    setWeight(committed);
                     if (unit === 'kg') {
+                      const next = Math.round(kgToLbs(committed));
                       setUnit('lbs');
-                      setWeight(Math.round(kgToLbs(weight)));
+                      setWeight(next);
+                      weightField.setValue(next);
                     } else {
+                      const next = Math.round(lbsToKg(committed));
                       setUnit('kg');
-                      setWeight(Math.round(lbsToKg(weight)));
+                      setWeight(next);
+                      weightField.setValue(next);
                     }
                   }}
                   className="text-[10px] font-black text-accent uppercase hover:underline"
@@ -247,11 +276,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
               </div>
               <div className="flex items-center rounded-xl bg-surface-2 border border-line px-3 py-1">
                 <input
-                  type="number"
-                  min={30}
-                  max={300}
-                  value={weight}
-                  onChange={(e) => setWeight(Math.max(30, Math.min(300, Number(e.target.value))))}
+                  type="text"
+                  inputMode="decimal"
+                  value={weightField.text}
+                  onChange={(e) => weightField.onChange(e.target.value)}
+                  onBlur={() => setWeight(weightField.commit())}
                   className="w-full bg-transparent text-sm font-black font-mono text-text outline-none"
                 />
                 <span className="text-xs text-text-muted">{unit}</span>

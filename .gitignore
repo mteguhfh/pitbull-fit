@@ -19,5 +19,9 @@ playwright/.cache
 # catatan lokal: jangan ikut ke repo publik
 *.md
 !README.md
+!docs/CHANGELOG.md
+!docs/CONTRIBUTING.md
 AGENTS.md
 CLAUDE.md
+coverage
+.eslintcache

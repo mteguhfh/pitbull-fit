@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mteguhfh.github.io/pitbull-fit/sitemap.xml

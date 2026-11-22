@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Card } from './Card';
 import { useWorkout } from '../context/WorkoutContext';
 import { formatDuration, formatNumber } from '../utils/format';
@@ -79,9 +79,11 @@ export const HomeSwipeWidget: React.FC<{
   const todayRoutine = routines[0] || null;
   const nextRoutine = routines.length > 1 ? routines[1] : routines[0];
 
-  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const thisWeekWorkouts = workoutHistory.filter(
-    (w) => w.status === 'completed' && w.startedAt >= oneWeekAgo
+  const oneWeekAgo = useMemo(() => Date.now() - 7 * 24 * 60 * 60 * 1000, []);
+  const thisWeekWorkouts = useMemo(
+    () =>
+      workoutHistory.filter((w) => w.status === 'completed' && w.startedAt >= oneWeekAgo),
+    [workoutHistory, oneWeekAgo]
   );
   const weekVolume = thisWeekWorkouts.reduce((sum, w) => sum + (w.totalVolume || 0), 0);
   const weekSets = thisWeekWorkouts.reduce((sum, w) => sum + (w.totalSets || 0), 0);

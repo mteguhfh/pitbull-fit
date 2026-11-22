@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card } from './Card';
 import { useWorkout } from '../context/WorkoutContext';
 import { formatDuration, formatNumber, formatWeight } from '../utils/format';
@@ -53,8 +53,9 @@ export const ProfileView: React.FC = () => {
   const WEEK = 7 * 24 * 3600 * 1000;
   const timeframeWeeks = { '4wk': 4, '8wk': 8, '12wk': 12 } as const;
 
+  const now = useMemo(() => Date.now(), []);
+
   const buildTimeframe = (weeks: number) => {
-    const now = Date.now();
     const buckets = Array.from({ length: weeks }, () => 0);
     workoutHistory.forEach((session) => {
       if (session.status !== 'completed') return;
@@ -109,7 +110,7 @@ export const ProfileView: React.FC = () => {
     return Array.from(byExercise.entries())
       .map(([exerciseId, data]) => {
         const meta = INITIAL_EXERCISES.find((e) => e.id === exerciseId);
-        const daysAgo = Math.floor((Date.now() - data.lastAt) / (24 * 3600 * 1000));
+        const daysAgo = Math.floor((now - data.lastAt) / (24 * 3600 * 1000));
         return {
           id: exerciseId,
           name: meta?.name || exerciseId,
@@ -632,7 +633,7 @@ export const ProfileView: React.FC = () => {
             workoutHistory[0] || {
               id: 'profile-summary',
               title: language === 'id' ? 'Ringkasan' : 'Summary',
-              startedAt: Date.now(),
+              startedAt: now,
               durationSeconds: 0,
               totalVolume: 0,
               totalSets: 0,

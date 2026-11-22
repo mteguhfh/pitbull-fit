@@ -24,6 +24,7 @@ import { soundFx } from '../utils/audio';
 import { Card } from './Card';
 import { calculateBMI, lbsToKg, kgToLbs, FitnessGoal, Gender } from '../utils/bmi';
 import { getDailyMotivationIndex, getMotivationText, FITNESS_MOTIVATIONS } from '../data/motivations';
+import { useNumericField } from '../hooks/useNumericField';
 
 export const SettingsView: React.FC<{ onReplayOnboarding: () => void }> = ({
   onReplayOnboarding
@@ -57,20 +58,38 @@ export const SettingsView: React.FC<{ onReplayOnboarding: () => void }> = ({
   const [editGender, setEditGender] = useState<Gender>(settings.profile?.gender || 'male');
   const [editGoal, setEditGoal] = useState<FitnessGoal>(settings.profile?.goal || 'maintain');
 
-  const liveBmi = calculateBMI(editWeight, editHeight, editAge, editGender, editGoal);
+  // Numeric drafts so a field can be cleared and retyped without snapping to a limit.
+  const editHeightField = useNumericField(editHeight, { min: 100, max: 250, fallback: 175 });
+  const editWeightField = useNumericField(editWeight, { min: 30, max: 300, fallback: 70, decimal: true });
+  const editAgeField = useNumericField(editAge, { min: 12, max: 99, fallback: 25 });
+
+  const previewWeight = parseFloat(editWeightField.text) || editWeight;
+  const previewHeight = parseFloat(editHeightField.text) || editHeight;
+  const previewAge = parseInt(editAgeField.text, 10) || editAge;
+
+  const liveBmi = calculateBMI(previewWeight, previewHeight, previewAge, editGender, editGoal);
 
   const handleSaveBmi = () => {
+    const finalHeight = editHeightField.commit();
+    const finalWeight = editWeightField.commit();
+    const finalAge = editAgeField.commit();
+    setEditHeight(finalHeight);
+    setEditWeight(finalWeight);
+    setEditAge(finalAge);
+
+    const bmi = calculateBMI(finalWeight, finalHeight, finalAge, editGender, editGoal);
+
     updateSettings({
       profile: {
-        heightCm: editHeight,
-        weightKg: editWeight,
-        age: editAge,
+        heightCm: finalHeight,
+        weightKg: finalWeight,
+        age: finalAge,
         gender: editGender,
-        bmi: liveBmi.bmi,
-        bmiCategory: liveBmi.category,
+        bmi: bmi.bmi,
+        bmiCategory: bmi.category,
         goal: editGoal,
-        dailyCalories: liveBmi.dailyCalories,
-        dailyProteinGrams: liveBmi.dailyProteinGrams
+        dailyCalories: bmi.dailyCalories,
+        dailyProteinGrams: bmi.dailyProteinGrams
       }
     });
     setShowEditBmi(false);
@@ -302,9 +321,11 @@ export const SettingsView: React.FC<{ onReplayOnboarding: () => void }> = ({
                   {t('age_label')}
                 </label>
                 <input
-                  type="number"
-                  value={editAge}
-                  onChange={(e) => setEditAge(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={editAgeField.text}
+                  onChange={(e) => editAgeField.onChange(e.target.value)}
+                  onBlur={() => setEditAge(editAgeField.commit())}
                   className="w-full px-2.5 py-1 rounded-lg bg-surface border border-line text-xs font-mono font-bold text-text"
                 />
               </div>
@@ -316,9 +337,11 @@ export const SettingsView: React.FC<{ onReplayOnboarding: () => void }> = ({
                   {t('height_label')}
                 </label>
                 <input
-                  type="number"
-                  value={editHeight}
-                  onChange={(e) => setEditHeight(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={editHeightField.text}
+                  onChange={(e) => editHeightField.onChange(e.target.value)}
+                  onBlur={() => setEditHeight(editHeightField.commit())}
                   className="w-full px-2.5 py-1 rounded-lg bg-surface border border-line text-xs font-mono font-bold text-text"
                 />
               </div>
@@ -328,9 +351,11 @@ export const SettingsView: React.FC<{ onReplayOnboarding: () => void }> = ({
                   {t('weight_label')}
                 </label>
                 <input
-                  type="number"
-                  value={editWeight}
-                  onChange={(e) => setEditWeight(Number(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={editWeightField.text}
+                  onChange={(e) => editWeightField.onChange(e.target.value)}
+                  onBlur={() => setEditWeight(editWeightField.commit())}
                   className="w-full px-2.5 py-1 rounded-lg bg-surface border border-line text-xs font-mono font-bold text-text"
                 />
               </div>

@@ -11,7 +11,6 @@ export const ExerciseVideoPlayer: React.FC<ExerciseVideoPlayerProps> = ({ exerci
   const [activeTab, setActiveTab] = useState<'video' | 'visualizer'>('video');
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [phase, setPhase] = useState<'eccentric' | 'isometric' | 'concentric'>('eccentric');
   const [phaseProgress, setPhaseProgress] = useState<number>(0);
   const [repCount, setRepCount] = useState<number>(1);
 
@@ -39,15 +38,8 @@ export const ExerciseVideoPlayer: React.FC<ExerciseVideoPlayerProps> = ({ exerci
   // 0% - 48%: Eccentric (controlled lowering)
   // 48% - 62%: Isometric (peak stretch pause)
   // 62% - 100%: Concentric (explosive drive)
-  useEffect(() => {
-    if (phaseProgress < 48) {
-      setPhase('eccentric');
-    } else if (phaseProgress < 62) {
-      setPhase('isometric');
-    } else {
-      setPhase('concentric');
-    }
-  }, [phaseProgress]);
+  const phase: 'eccentric' | 'isometric' | 'concentric' =
+    phaseProgress < 48 ? 'eccentric' : phaseProgress < 62 ? 'isometric' : 'concentric';
 
   const embedId = exercise.videoEmbedId || 'rT7DgCr-3pg';
   const tempo = exercise.tempo || '3-0-1-0';
@@ -74,7 +66,7 @@ export const ExerciseVideoPlayer: React.FC<ExerciseVideoPlayerProps> = ({ exerci
 
   // Compute normalized rep contraction u in [0, 1]
   // 0 = bottom / stretched, 1 = top / contracted
-  let u = 0;
+  let u: number;
   if (phaseProgress < 48) {
     // Eccentric: lowering from 1 down to 0
     const tNorm = phaseProgress / 48;
