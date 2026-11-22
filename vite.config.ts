@@ -10,6 +10,8 @@ export default defineConfig({
     host: true
   },
   test: {
+    // jsdom tests stub globals per file, so workers stay isolated
+    isolate: true,
     // e2e/ belongs to Playwright, not vitest
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
